@@ -5,7 +5,6 @@ setuptools.setup(
     version="0.2.0",
     python_requires=">=3.5",
     install_requires=[
-        "contours[shapely]",
         "flatdict",
         "gdspy",
         "h5py",

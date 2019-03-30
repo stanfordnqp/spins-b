@@ -39,7 +39,6 @@ Recommendations
 ---------------
 - We recommend using `virtual environments <https://docs.python.org/3.6/tutorial/venv.html>`_
   to isolate installation from the rest of the system.
-- For 2D optimizations, we recommend installing UMFPACK and scikits-umfpack.
 - If using OpenBLAS, we recommend setting the number of OpenBLAS threads
   (:code:`OPENBLAS_NUM_THREADS` flag) to 1 as SPINS-B leverages parallelism itself.
 
@@ -49,7 +48,7 @@ Simply clone the SPINS-B repository and run :code:`pip`:
 
 .. code:: bash
 
-   $ pip install spins-b
+   $ pip install ./spins-b
 
 Getting Started
 ---------------
@@ -113,12 +112,9 @@ domain (FDTD) method in these cases.
 
 SPINS-B can use both a CPU-based solver or the GPU-accelerated Maxwell FDFD
 solver. For 2D simulations, we recommend using a direct matrix CPU-based
-solver ("local_direct") because it is faster. In particular, we
-recommend installing scikits-umfpack for best performance.
-
-3D simulations require too much memory and an iterative solver must be
-used. We recommend the GPU-accelerated MaxwellFDFD solver ("maxwell_cg")
-in this case.
+solver ("local_direct") because it is faster. 3D simulations require too much
+memory and an iterative solver must be used. We recommend the GPU-accelerated
+MaxwellFDFD solver ("maxwell_cg") in this case.
 
 
 Publications
