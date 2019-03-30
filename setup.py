@@ -12,6 +12,7 @@ setuptools.setup(
         "matplotlib",
         "numpy",
         "pandas",
+        "pyyaml",
         "requests",
         "schematics",
         "scikit-umfpack",
