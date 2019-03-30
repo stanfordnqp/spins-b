@@ -1,0 +1,13 @@
+monitor_list:
+- monitor_names: [mon_field]
+  monitor_type: planar
+  vector_operation: magnitude
+
+- monitor_names: [mon_eps]
+  monitor_type: planar
+  vector_operation: z
+  scalar_operation: magnitude
+
+- monitor_names: [mon_power]
+  monitor_type: scalar
+  scalar_operation: magnitude

@@ -1,0 +1,30 @@
+#!/bin/bash
+# Prepares code for a merge request.
+# Find all Python files, excluding tests (begin with test_).
+PYTHON_SOURCE_FILES=`find spins -name "*.py" | grep -v test_`
+# All Python files modified in branch (compared to master).
+MODIFIED_PYTHON_FILES=$(git diff master... --name-only | grep ".*\.py$")
+
+COMMAND_HEADER="=========="
+
+echo_command() {
+  # Print a header out commenting on the current command.
+  echo $COMMAND_HEADER Running $1 $COMMAND_HEADER
+}
+
+if [ ! -z "$MODIFIED_PYTHON_FILES" ]
+then
+  echo_command yapf
+  yapf -i $MODIFIED_PYTHON_FILES
+
+  echo_command pylint
+  pylint $MODIFIED_PYTHON_FILES
+else
+  echo "No modified Python files detected... Skipping yapf and pylint"
+fi
+
+#echo_command pytype
+#pytype $PYTHON_SOURCE_FILES
+
+echo_command pytest
+python3 -m pytest spins -n 4 --cov spins --cov-report html --disable-warnings
