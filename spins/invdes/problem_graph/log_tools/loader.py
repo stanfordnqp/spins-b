@@ -169,10 +169,14 @@ def get_monitor_data(log_df: pd.DataFrame, monitor_names: Union[str, List[str]],
 
             mask = ~log_df_event_trans[full_name].isnull()
             mon_dat = log_df_event_trans[full_name][mask].tolist()
-            iter_data = log_df_event_trans[LOG_ITERATION_KEY][
-                mask &
-                ~log_df_event_trans[LOG_ITERATION_KEY].isnull()].tolist()
 
+            # Check that there is iteration data for this monitor.
+            if LOG_ITERATION_KEY in log_df_event_trans:
+                iter_data = log_df_event_trans[LOG_ITERATION_KEY][
+                    mask &
+                    ~log_df_event_trans[LOG_ITERATION_KEY].isnull()].tolist()
+            else:
+                iter_data = []
             if mon_dat:
                 monitor_data[transformation_name] = TransformMonitorData(
                     mon_dat, list(np.int_(iter_data)))
@@ -206,6 +210,14 @@ def get_single_monitor_data(
         iteration available is returned.
     """
 
+    # If no transformation name given, extract all transformation names to find the
+    # last one with desired event data.
+    if transformation_name is None:
+        all_transformation_names = log_df[LOG_TRANSFORMATION_KEY].unique(
+        ).tolist()
+    else:
+        all_transformation_names = [transformation_name]
+
     # If no event name given, extract all event names to find the last one with
     # data.
     if event_name is None:
@@ -214,24 +226,23 @@ def get_single_monitor_data(
         all_event_names = [event_name]
 
     # Get all data for the given monitor name associated with the event_name.
-    for name_event in reversed(all_event_names):
-        data_all = get_monitor_data(log_df, monitor_names, name_event)
+    for name_transformation in reversed(all_transformation_names):
+        for name_event in reversed(all_event_names):
+            data_all = get_monitor_data(log_df, monitor_names, name_event)
 
-        # Check if data was found.
-        if not data_all:
-            continue
-        if transformation_name is None:
-            transformation_key = list(data_all.keys())[-1]
-        elif transformation_name in data_all.keys():
-            transformation_key = transformation_name
+            # Check if data for the given transformation name was found.
+            if not data_all or name_transformation not in data_all.keys():
+                continue
 
-        if iteration in data_all[transformation_key].iteration:
-            iteration_index = data_all[transformation_key].iteration.index(
-                iteration)
-        else:
-            iteration_index = -1
-        field_dat = data_all[transformation_key].data[iteration_index]
-        return field_dat
+            transformation_key = name_transformation
+
+            if iteration in data_all[transformation_key].iteration:
+                iteration_index = data_all[transformation_key].iteration.index(
+                    iteration)
+            else:
+                iteration_index = -1
+            return data_all[transformation_key].data[iteration_index]
+
     return []
 
 
