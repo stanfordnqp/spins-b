@@ -70,6 +70,7 @@ def plot_scalar_monitors(
 
         plot_data = loader.get_joined_scalar_monitors(
             log_df, monitor_description.monitor_names, event_name, scalar_op)
+
         # Choose axis object to plot on.
         if same_plt:
             axs = axes_list[0]
@@ -85,8 +86,13 @@ def plot_scalar_monitors(
         if same_plt:
             axs.legend()
         else:
-            axs.set_title("{name}:\nFinal value: {value:1.4E}".format(
-                name=monitor_description.joiner_id, value=plot_data.data[-1]))
+            if not plot_data.data.size:
+                axs.set_title("{name}:\nNo iteration data found.".format(
+                    name=monitor_description.joiner_id))
+            else:
+                axs.set_title("{name}:\nFinal value: {value:1.4E}".format(
+                    name=monitor_description.joiner_id,
+                    value=plot_data.data[-1]))
         axs.set_xlabel("Iteration")
 
     # Save generated figures to multipage pdf object.
@@ -103,11 +109,10 @@ def plot_scalar_monitors(
         plt.show()
 
 
-# TODO(jskarda): Verify `event_name` default value.
 def plot_field_data(
         monitor_description_list: monitor_spec.MonitorDescriptionList,
         log_df: pd.DataFrame,
-        event_name: Optional[str] = "optimizing",
+        event_name: Optional[str] = None,
         transformation_name: Optional[str] = None,
         iteration: Optional[int] = None,
         pdf_obj: Optional[backend_pdf.PdfPages] = None,
@@ -173,6 +178,9 @@ def plot_field_data(
             cax = make_axes_locatable(axs).append_axes(
                 "right", size="5%", pad=0.15)
             plt.colorbar(im_plt, ax=axs, cax=cax, format="%.2e")
+        else:
+            axs.set_title("{name}:\nNo field data found.".format(
+                name=monitor_description.joiner_id))
     # Save generated figures to multipage pdf object.
     if pdf_obj is not None:
         for fig in fig_list:
