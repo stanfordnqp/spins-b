@@ -1,0 +1,11 @@
+test:
+  script:
+    # Setup virtualenv.
+    - virtualenv -p python3 spins-env
+    - source spins-env/bin/activate
+    # Install spins.
+    - pip3 install .[test]
+    - export MPLBACKEND=agg
+    - export OPENBLAS_NUM_THREADS=1
+    - python -m pytest -n 4 examples --disable-warnings
+    - python -m pytest -n 4 --cov=spins --disable-warnings
