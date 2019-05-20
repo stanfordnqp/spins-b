@@ -3,6 +3,8 @@ python:
   - "3.5"
   - "3.6"
 install:
+  # Update installed packages.
+  - pip install -U numpy pytest
   - pip install .[test]
 script:
   - MPLBACKEND=Agg python -m pytest -n 4 examples --disable-warnings
