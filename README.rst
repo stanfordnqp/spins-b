@@ -1,3 +1,6 @@
+.. image:: https://travis-ci.com/stanfordnqp/spins-b.svg?branch=master
+    :target: https://travis-ci.com/stanfordnqp/spins-b
+    
 SPINS-B
 =======
 
