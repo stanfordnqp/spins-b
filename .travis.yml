@@ -1,0 +1,11 @@
+language: python
+python:
+  - "3.5"
+  - "3.6"
+install:
+  # Update installed packages.
+  - pip install -U numpy pytest
+  - pip install .[test]
+script:
+  - MPLBACKEND=Agg python -m pytest -n 4 examples --disable-warnings
+  - MPLBACKEND=Agg python -m pytest -n 4 --cov=spins --disable-warnings
