@@ -36,7 +36,7 @@ Requirements
 ------------
 - Python 3.5+
 - Some version of BLAS (e.g. OpenBLAS, ATLAS, Intel MKL)
-- MaxwellFDFD solver (github.com/stanfordnqp/maxwell-b) for 3D simulations
+- `Maxwell solver <http://github.com/stanfordnqp/maxwell-b>`_ for 3D simulations
 
 Recommendations
 ---------------
