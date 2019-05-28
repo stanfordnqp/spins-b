@@ -33,13 +33,12 @@ Also available:
 """
 
 import copy
-import numpy as np
-import scipy.sparse as sparse
 from typing import List, Tuple
 
-from . import vec, dx_lists_t, vfield_t
+import numpy as np
+import scipy.sparse as sparse
 
-__author__ = 'Jan Petykiewicz'
+from . import vec, dx_lists_t, vfield_t, GridSpacing
 
 
 def e_full(omega: complex,
@@ -49,8 +48,7 @@ def e_full(omega: complex,
            pec: vfield_t = None,
            pmc: vfield_t = None,
            bloch_vec: np.ndarray = None,
-           shift_orthogonal: np.array = np.zeros((3,
-                                                        3))) -> sparse.spmatrix:
+           shift_orthogonal: np.array = np.zeros((3, 3))) -> sparse.spmatrix:
     """
     Wave operator del x (1/mu * del x) - omega**2 * epsilon, for use with E-field,
      with wave equation
@@ -134,8 +132,7 @@ def h_full(omega: complex,
            pec: vfield_t = None,
            pmc: vfield_t = None,
            bloch_vec: np.ndarray = None,
-           shift_orthogonal: np.array = np.zeros((3,
-                                                        3))) -> sparse.spmatrix:
+           shift_orthogonal: np.array = np.zeros((3, 3))) -> sparse.spmatrix:
     """
     Wave operator del x (1/epsilon * del x) - omega**2 * mu, for use with H-field,
      with wave equation
@@ -243,8 +240,7 @@ def eh_full(omega: complex,
 
 def curl_h(dxes: dx_lists_t,
            bloch_vec: np.ndarray = None,
-           shift_orthogonal: np.array = np.zeros((3,
-                                                        3))) -> sparse.spmatrix:
+           shift_orthogonal: np.array = np.zeros((3, 3))) -> sparse.spmatrix:
     """
     Curl operator for use with the H field.
 
@@ -263,8 +259,7 @@ def curl_h(dxes: dx_lists_t,
 
 def curl_e(dxes: dx_lists_t,
            bloch_vec: np.ndarray = None,
-           shift_orthogonal: np.array = np.zeros((3,
-                                                        3))) -> sparse.spmatrix:
+           shift_orthogonal: np.array = np.zeros((3, 3))) -> sparse.spmatrix:
     """
     Curl operator for use with the E field.
 
@@ -761,9 +756,7 @@ def poynting_e_cross(e: vfield_t, dxes: dx_lists_t) -> sparse.spmatrix:
         for dx in np.meshgrid(*dxes[1], indexing='ij')
     ]
 
-    Ex, Ey, Ez = [
-        sparse.diags(ei * da) for ei, da in zip(np.split(e, 3), dxag)
-    ]
+    Ex, Ey, Ez = [sparse.diags(ei * da) for ei, da in zip(np.split(e, 3), dxag)]
 
     n = np.prod(shape)
     zero = sparse.csr_matrix((n, n))
@@ -795,9 +788,7 @@ def poynting_h_cross(h: vfield_t, dxes: dx_lists_t) -> sparse.spmatrix:
         for dx in np.meshgrid(*dxes[0], indexing='ij')
     ]
 
-    Hx, Hy, Hz = [
-        sparse.diags(hi * db) for hi, db in zip(np.split(h, 3), dxbg)
-    ]
+    Hx, Hy, Hz = [sparse.diags(hi * db) for hi, db in zip(np.split(h, 3), dxbg)]
 
     n = np.prod(shape)
     zero = sparse.csr_matrix((n, n))
@@ -808,12 +799,29 @@ def poynting_h_cross(h: vfield_t, dxes: dx_lists_t) -> sparse.spmatrix:
     return P
 
 
-def poynting_chew_e_cross(e: vfield_t, dxes: dx_lists_t) -> sparse.spmatrix:
+def poynting_chew_e_cross(efield: np.ndarray,
+                          dxes: GridSpacing) -> sparse.spmatrix:
+    """Computes a matrix for computing Poynting vector.
 
+    This function produces a matrix [Ex] such that `S = [Ex] @ conj(hfield)`
+    gives the Poynting vector, normalized by the area element, i.e. the total
+    power over a plane is simply the sum over `S` without further need to
+    add any terms that involve the Yee grid spacing.
+
+    The Poynting vector definition is taken from
+    W.C. Chew. Electromagnetic theory on a lattice (1994).
+
+    Args:
+        efield: Electric field to use.
+        dxes: Grid spacing.
+
+    Returns:
+        The `[Ex]` matrix.
+    """
     shp = [len(dx) for dx in dxes[0]]
     shift_op = [rotation_bloch_shift(i, shp) for i in range(3)]
 
-    e_i = np.split(e, 3)
+    e_i = np.split(efield, 3)
     zeros = sparse.csr_matrix(2 * (len(e_i[0]),))
     dia = lambda x: sparse.diags(x, shape=2 * (len(e_i[0]),))
 
@@ -824,197 +832,64 @@ def poynting_chew_e_cross(e: vfield_t, dxes: dx_lists_t) -> sparse.spmatrix:
         sparse.diags(dx.flatten(order='F'))
         for dx in np.meshgrid(*dxes[0], indexing='ij')
     ]
-    area = [[dagy @ dagz, zeros, zeros], [zeros, dagx @ dagz, zeros],
+    # yapf:disable
+    area = [[dagy @ dagz, zeros, zeros],
+            [zeros, dagx @ dagz, zeros],
             [zeros, zeros, dagx @ dagy]]
 
-    block_e_cross = [[
-        zeros, -dia(shift_op[0] @ e_i[2]),
-        dia(shift_op[0] @ e_i[1])
-    ], [dia(shift_op[1] @ e_i[2]), zeros, -dia(shift_op[1] @ e_i[0])], [
-        -dia(shift_op[2] @ e_i[1]),
-        dia(shift_op[2] @ e_i[0]), zeros
-    ]]
+    block_e_cross = [
+        [zeros, -dia(shift_op[0] @ e_i[2]), dia(shift_op[0] @ e_i[1])],
+        [dia(shift_op[1] @ e_i[2]), zeros, -dia(shift_op[1] @ e_i[0])],
+        [-dia(shift_op[2] @ e_i[1]), dia(shift_op[2] @ e_i[0]), zeros]
+    ]
+    # yapf:enable
 
     return sparse.bmat(area) @ sparse.bmat(block_e_cross)
 
 
-def poynting_chew_h_cross(h: vfield_t, dxes: dx_lists_t) -> sparse.spmatrix:
+def poynting_chew_h_cross(hfield: np.ndarray,
+                          dxes: GridSpacing) -> sparse.spmatrix:
+    """Computes a matrix for computing Poynting vector.
 
+    This function produces a matrix [Hx] such that `S = -conj([Hx]) @ efield`
+    gives the Poynting vector, normalized by the area element, i.e. the total
+    power over a plane is simply the sum over `S` without further need to
+    add any terms that involve the Yee grid spacing.
+
+    The Poynting vector definition is taken from
+    W.C. Chew. Electromagnetic theory on a lattice (1994).
+
+    Args:
+        hfield: Magnetic field to use.
+        dxes: Grid spacing.
+
+    Returns:
+        The `[Hx]` matrix.
+    """
     shp = [len(dx) for dx in dxes[0]]
     shift_op = [rotation_bloch_shift(i, shp) for i in range(3)]
 
-    h_i = np.split(h, 3)
+    h_i = np.split(hfield, 3)
     zeros = sparse.csr_matrix(2 * (len(h_i[0]),))
     dia = lambda x: sparse.diags(x, shape=2 * (len(h_i[0]),))
 
     dxbg = [
-        dx.flatten(order='F') for dx in np.meshgrid(*dxes[0], indexing='ij')
+        dx.flatten(order="F") for dx in np.meshgrid(*dxes[0], indexing="ij")
     ]
     dagx, dagy, dagz = [
-        sparse.diags(dx.flatten(order='F'))
-        for dx in np.meshgrid(*dxes[0], indexing='ij')
+        sparse.diags(dx.flatten(order="F"))
+        for dx in np.meshgrid(*dxes[0], indexing="ij")
     ]
-    area = [[dagy @ dagz, zeros, zeros], [zeros, dagx @ dagz, zeros],
+
+    # yapf:disable
+    area = [[dagy @ dagz, zeros, zeros],
+            [zeros, dagx @ dagz, zeros],
             [zeros, zeros, dagx @ dagy]]
 
-    block_e_cross = [[
-        zeros, -dia(shift_op[0] @ h_i[2]),
-        dia(shift_op[0] @ h_i[1])
-    ], [dia(shift_op[1] @ h_i[2]), zeros, -dia(shift_op[1] @ h_i[0])], [
-        -dia(shift_op[2] @ h_i[1]),
-        dia(shift_op[2] @ h_i[0]), zeros
-    ]]
+    block_h_cross = [
+        [zeros, -dia(h_i[2]) @ shift_op[0], dia(h_i[1]) @ shift_op[0]],
+        [dia(h_i[2]) @ shift_op[1], zeros, -dia(h_i[0]) @ shift_op[1]],
+        [-dia(h_i[1]) @ shift_op[2], dia(h_i[0]) @ shift_op[2], zeros]]
+    # yapf:enable
 
-    return sparse.bmat(area) @ sparse.bmat(block_e_cross)
-
-
-# DEPRECATED
-def rotation(axis: int, shape: List[int],
-             shift_distance: int = 1) -> sparse.spmatrix:
-    """
-    DEPRECATED: use the rotation with bloch and shift
-    FUNCTION NOT USED IN DERIVATIVES
-
-    Utility operator for performing a circular shift along a specified axis by 1 element.
-
-    :param axis: Axis to shift along. x=0, y=1, z=2
-    :param shape: Shape of the grid being shifted
-    :param shift_distance: Number of cells to shift by. May be negative. Default 1.
-    :return: Sparse matrix for performing the circular shift
-    """
-    if len(shape) not in (2, 3):
-        raise Exception('Invalid shape: {}'.format(shape))
-    if axis not in range(len(shape)):
-        raise Exception('Invalid direction: {}, shape is {}'.format(
-            axis, shape))
-
-    shifts = [abs(shift_distance) if a == axis else 0 for a in range(3)]
-    shifted_diags = [(np.arange(n) + s) % n for n, s in zip(shape, shifts)]
-    ijk = np.meshgrid(*shifted_diags, indexing='ij')
-
-    n = np.prod(shape)
-    i_ind = np.arange(n)
-    j_ind = ijk[0] + ijk[1] * shape[0]
-    if len(shape) == 3:
-        j_ind += ijk[2] * shape[0] * shape[1]
-
-    vij = (np.ones(n), (i_ind, j_ind.flatten(order='F')))
-
-    d = sparse.csr_matrix(vij, shape=(n, n))
-
-    if shift_distance < 0:
-        d = d.T
-
-    return d
-
-
-def append_bloch_shift(A: np.array,
-                       axis: int,
-                       ind_axis: int,
-                       dx: List[np.ndarray],
-                       bloch_vector: np.array = np.zeros(3),
-                       shift_orthogonal: List[int] = [0, 0, 0]):
-
-    shape = [len(dx[0]), len(dx[1]), len(dx[2])]
-    if shift_orthogonal[axis] != 0:
-        raise ValueError('Orthogonal shift defined in the axis direction')
-    if (list(A.shape) != shape):
-        raise ValueError('dxes do not match A')
-
-    dx_0 = [dx[0][0], dx[1][0], dx[2][0]]
-    dx_sum = [
-        np.array(dx[0]).sum(),
-        np.array(dx[1]).sum(),
-        np.array(dx[2]).sum()
-    ]
-
-    # calculate the shift in the axis and orthogonal directions
-    shift = int(np.floor(ind_axis / shape[axis]))
-    total_shift_orthogonal = -shift * np.array(shift_orthogonal).astype(int)
-
-    # find slices of the corresponding plane in A
-    slices = [slice(0, shape[0]), slice(0, shape[1]), slice(0, shape[2])]
-    i_cell = ind_axis - shape[axis] * shift
-    slices[axis] = slice(i_cell, i_cell + 1)
-
-    # shift the plane
-    shift_plane = np.roll(A[slices], tuple(total_shift_orthogonal),
-                             (0, 1, 2)).astype(complex)
-
-    # apply phase
-    phase_axis = bloch_vector[axis] * shift * dx_sum[axis]
-    phase_orthogonal = bloch_vector @ (total_shift_orthogonal * dx_0)
-    shift_plane *= np.exp(-1j * (phase_axis + phase_orthogonal))
-
-    # orthogonal bloch shift
-    for i in range(3):
-        slices_orth = copy.deepcopy(slices)
-        slices_orth[axis] = slice(0, 1)
-        if total_shift_orthogonal[i] > 0:
-            slices_orth[i] = slice(0, int(total_shift_orthogonal[i]))
-            phase_orth = bloch_vector[i] * (-dx_sum[i])
-            shift_plane[slices_orth] *= np.exp(-1j * phase_orth)
-        elif total_shift_orthogonal[i] < 0:
-            slices_orth[i] = slice(shape[i] + int(total_shift_orthogonal[i]),
-                                   shape[i])
-            phase_orth = bloch_vector[i] * dx_sum[i]
-            shift_plane[slices_orth] *= np.exp(-1j * phase_orth)
-
-    return shift_plane
-
-
-def poynting_h_cross_shift(h: vfield_t,
-                           dxes: dx_lists_t,
-                           bloch_vec: np.ndarray = np.zeros(3),
-                           shift_orthogonal: np.array = np.zeros(
-                               (3, 3))) -> sparse.spmatrix:
-    """
-    Operator for computing the Poynting vector, containing the (H x) portion of the Poynting vector.
-
-    :param h: Vectorized H-field for the HxE cross product
-    :param dxes: Grid parameters [dx_e, dx_h] as described in fdfd_tools.operators header
-    :shift_orthogonal: shifts orthogonal to the axis directions to be taken into
-                        account when applying periodc boundary conditions (the 
-                        diagonal can only contain zeros)
-    :return: Sparse matrix containing (H x) portion of Poynting cross product
-    """
-
-    # make avgf
-    shape_e = [s.size for s in dxes[0]]
-    L_sim = np.array([np.sum(dx) for dx in dxes[0]])
-    dx_0 = np.array([dx[0] for dx in dxes[0]])
-    shift_distances = (np.diag(L_sim) - shift_orthogonal @ np.diag(dx_0))
-    bloch_phase = shift_distances @ bloch_vec
-    fx, fy, fz = [
-        avgf(i, shape_e, bloch_phase, shift_orthogonal[i]) for i in range(3)
-    ]
-    # make avgb
-    shape_h = [s.size for s in dxes[1]]
-    L_sim = np.array([np.sum(dx) for dx in dxes[1]])
-    dx_0 = np.array([dx[0] for dx in dxes[1]])
-    shift_distances = (np.diag(L_sim) - shift_orthogonal @ np.diag(dx_0))
-    bloch_phase = shift_distances @ bloch_vec
-    bx, by, bz = [
-        avgb(i, shape_h, bloch_phase, shift_orthogonal[i]) for i in range(3)
-    ]
-
-    dxbg = [
-        dx.flatten(order='F') for dx in np.meshgrid(*dxes[1], indexing='ij')
-    ]
-    dagx, dagy, dagz = [
-        sparse.diags(dx.flatten(order='F'))
-        for dx in np.meshgrid(*dxes[0], indexing='ij')
-    ]
-
-    Hx, Hy, Hz = [
-        sparse.diags(hi * db) for hi, db in zip(np.split(h, 3), dxbg)
-    ]
-
-    n = np.prod(shape_e)
-    zero = sparse.csr_matrix((n, n))
-
-    P = sparse.bmat([[zero, -by @ Hz @ fx @ dagy, bz @ Hy @ fx @ dagz],
-                     [bx @ Hz @ fy @ dagx, zero, -bz @ Hx @ fy @ dagz],
-                     [-bx @ Hy @ fz @ dagx, by @ Hx @ fz @ dagy, zero]])
-
-    return P
+    return sparse.bmat(area) @ sparse.bmat(block_h_cross)

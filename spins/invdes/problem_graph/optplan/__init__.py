@@ -138,3 +138,8 @@ from spins.invdes.problem_graph.optplan.io import *
 # Use this to allow overriding of the default registrations (which have no
 # creator function).
 GLOBAL_CONTEXT_STACK.push(OptplanContext())
+
+# Make it easier to setup a schema by importing the required components into
+# `optplan` module.
+from spins.invdes.problem_graph.schema_utils import polymorphic_model_type as define_schema_type
+from schematics import types
