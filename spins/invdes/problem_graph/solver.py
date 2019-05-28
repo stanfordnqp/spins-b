@@ -172,8 +172,9 @@ def restore_workspace(plan: optplan.OptimizationPlan, work: workspace.Workspace,
     if log_data["transformation"] == plan.transformations[transform_index].name:
         # The log file is in the next transformation so restore the
         # current parametrization value.
-        work.get_object(transform.parametrization).deserialize(
-            log_data["parametrization"])
+        work.get_object(
+            plan.transformations[transform_index].parametrization).deserialize(
+                log_data["parametrization"])
         event_data = log_data["event"]
 
     # TODO(logansu): Remove hack.
