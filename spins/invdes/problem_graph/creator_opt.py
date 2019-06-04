@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, Union
 
 from spins.invdes import optimization as optim
 from spins.invdes import parametrization
@@ -325,14 +325,11 @@ class PenaltyOptimizer:
 
             # Log the data.
             transformation_state = {
-                PenaltyOptimizer.EVENT_ITERATION:
-                iteration,
+                PenaltyOptimizer.EVENT_ITERATION: iteration,
                 PenaltyOptimizer.EVENT_STATE:
                 PenaltyOptimizer.EVENT_STATE_OPTIMIZING,
-                PenaltyOptimizer.EVENT_CYCLE_NUM:
-                optimizer.cycle_num,
-                PenaltyOptimizer.EVENT_MU:
-                optimizer.mu,
+                PenaltyOptimizer.EVENT_CYCLE_NUM: optimizer.cycle_num,
+                PenaltyOptimizer.EVENT_MU: optimizer.mu,
             }
             self.logger.write(
                 event=transformation_state,
@@ -459,3 +456,72 @@ def create_fix_border(params: optplan.HermiteParamFixBorder,
             ymax_border=params.border_layers[3])
 
     return fix_borders
+
+
+class ContToDiscThresholding:
+    """Fixes the border of the Hermite parametrization transformation.
+
+    In order to seamlessly transition from inside the design region to outside
+    the design region with fabrication constraints, it is necessary to fix
+    the values of the levelset function near the boundaries (i.e. do not allow
+    them to optimize). Calling this function sets the number of cells along
+    the borders that will be fixed into place.
+    """
+
+    def __init__(self,
+                 cont_param: parametrization.Parametrization,
+                 threshold=float) -> None:
+        """Initializes the transformation.
+
+        Args:
+            cont_param: Continuous parametrization of which the transformation's
+                        parametrization will take the threshold.
+        """
+        self.cont_param = cont_param
+        self.threshold = threshold
+
+    def __call__(self,
+                 param: parametrization.Parametrization,
+                 event_data: Optional[Dict] = None) -> None:
+        """Runs the optimization with the given parametriation.
+
+        Args:
+            param: Parametrization to change.
+        """
+        from spins.invdes.parametrization import levelset_parametrization
+        if isinstance(param,
+                      levelset_parametrization.BicubicLevelSet) and isinstance(
+                          self.cont_param, parametrization.CubicParam):
+            param.decode(self.cont_param.encode() - self.threshold)
+        elif isinstance(
+                param, levelset_parametrization.HermiteLevelSet) and isinstance(
+                    self.cont_param, parametrization.HermiteParam):
+            p = self.cont_param.encode()
+            p[:len(p) // 4] -= self.threshold
+            param.decode(p)
+        elif isinstance(
+                param, levelset_parametrization.HermiteLevelSet) and isinstance(
+                    self.cont_param, parametrization.CubicParam):
+            vec = self.cont_param.geometry_matrix @ self.cont_param.encode()
+            p = param.reverse_geometry_matrix @ param.derivative_matrix @ vec
+            p[:len(p) // 4] -= self.threshold
+            param.decode(p)
+        else:
+            raise ValueError("Parameterization do not match.")
+
+
+@optplan.register_transformation(optplan.ContToDiscThresholding)
+def create_cont_to_disc_thresholding(
+        params: optplan.ContToDiscThresholding,
+        work: Optional[workspace.Workspace] = None
+) -> Callable[[parametrization.HermiteParam], None]:
+    """Creates transformation that thresholds a cubic parametrization and uses
+    this as the levelset function for a Hermite parametrization.
+
+    Args:
+        params: Optplan parameters of cont2disc_threshold.
+        work: Workspace of the transformation. 
+    """
+    cont_param = work.get_object(params.continuous_parametrization)
+    return Cont2DiscThresholding(
+        cont_param=cont_param, threshold=params.threshold)
