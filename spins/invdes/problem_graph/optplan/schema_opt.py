@@ -159,3 +159,22 @@ class GratingEdgeFitTransformation(optplan.TransformationBase):
         "grating_edge_fit_transformation")
     parametrization = optplan.ReferenceType(optplan.Parametrization)
     min_feature = types.FloatType()
+
+@optplan.register_node_type(optplan.NodeMetaType.TRANSFORMATION)
+class ContToDiscThresholding(optplan.TransformationBase):
+    """Defines a transformation that takes a continuous parametrization and
+    thresholds it at a value.
+
+    Attributes:
+        type: Must be "cont_to_disc_thresholding".
+        value: Threshold value.
+
+    Note that this requests requires the parametrization to have the same
+    parametrization  vector size, e.g. cubic to bicubic or hermiteparam
+    to hermitelevelset.
+    """
+    type = schema_utils.polymorphic_model_type("cont_to_disc_thresholding")
+    continuous_parametrization = optplan.ReferenceType(optplan.Parametrization)
+    threshold = types.FloatType()
+
+
