@@ -519,9 +519,9 @@ def create_cont_to_disc_thresholding(
     this as the levelset function for a Hermite parametrization.
 
     Args:
-        params: Optplan parameters of cont2disc_threshold.
+        params: Optplan parameters of conttodisc_threshold.
         work: Workspace of the transformation. 
     """
     cont_param = work.get_object(params.continuous_parametrization)
-    return Cont2DiscThresholding(
+    return ContToDiscThresholding(
         cont_param=cont_param, threshold=params.threshold)
