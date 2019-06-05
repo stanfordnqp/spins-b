@@ -615,6 +615,14 @@ class DiffEpsilon(problem.OptimizationFunction):
 def create_diff_epsilon(params: optplan.DiffEpsilon,
                         work: workspace.Workspace) -> DiffEpsilon:
 
+    if params.epsilon_ref.type == "gds":
+        space = work.get_object(params.epsilon.simulation_space)
+        from spins.invdes.problem_graph.simspace import _create_grid
+        eps = _create_grid(params.epsilon_ref, space._edge_coords,
+                           params.epsilon.wavelength, space._ext_dir,
+                           space._filepath)
+        eps_vec = fdfd_tools.vec(eps.grids)
+
     def epsilon_ref() -> np.ndarray:
         if params.epsilon_ref.type == "parametrization":
             space = work.get_object(params.epsilon_ref.simulation_space)(
@@ -623,10 +631,12 @@ def create_diff_epsilon(params: optplan.DiffEpsilon,
                 params.epsilon_ref.parametrization).get_structure()
             return (fdfd_tools.vec(space.eps_bg.grids) +
                     space.selection_matrix @ structure)
+        elif params.epsilon_ref.type == "gds":
+            return eps_vec
         else:
             raise NotImplementedError(
                 "Epsilon spec with type {} not yet supported".format(
-                    work.epsilon_ref.type))
+                    params.epsilon_ref.type))
 
     return DiffEpsilon(
         epsilon=work.get_object(params.epsilon), epsilon_ref=epsilon_ref)
