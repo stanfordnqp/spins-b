@@ -1,7 +1,11 @@
+import inspect
 import os
 from typing import List, NamedTuple, Optional, Tuple
 
+import warnings
+
 import numpy as np
+import pandas as pd
 
 from spins import gds as gdslib
 from spins import fdfd_tools
@@ -14,9 +18,9 @@ NM_PER_UM = 1000
 
 
 class SimulationSpaceInstance(
-        NamedTuple("SimulationSpaceInstance",
-                   [("eps_bg", gridlock.Grid),
-                    ("selection_matrix", np.ndarray)])):
+        NamedTuple(
+            "SimulationSpaceInstance", [("eps_bg", gridlock.Grid),
+                                        ("selection_matrix", np.ndarray)])):
     """Represents simulation space at a particular operating condition.
 
     Attributes:
@@ -273,15 +277,47 @@ def _get_mat_index(index_element: optplan.Material,
     elif index_element.mat_name is not None:
         name = index_element["mat_name"]
         if name in ["Air", "air"]:
-            index = material.Air.refractive_index(np.array(wlen))[0]
+            mat_obj = material.Air()
         elif name in ["SiO2", "sio2", "sio"]:
-            index = material.SiO2.refractive_index(np.array(wlen))[0]
+            mat_obj = material.SiO2()
         elif name in ["Si", "si"]:
-            index = material.Si.refractive_index(np.array(wlen))[0]
+            mat_obj = material.Si()
         elif name in ["Si3N4", "sin", "si3n4", "SiN"]:
-            index = material.Si3N4.refractive_index(np.array(wlen))[0]
+            mat_obj = material.Si3N4()
         else:
             raise ValueError("No valid material name.")
+        index = mat_obj.refractive_index(np.array(wlen))[0]
+    elif index_element.mat_file is not None:
+        # Handle importing data from csv file.
+        fname = index_element.mat_file
+        # Check if full path already given.
+        if os.path.isfile(fname):
+            csv_file = fname
+        # Look for csv file in the material/csv_files directory.
+        else:
+            import spins.material
+            path_dir = os.path.dirname(inspect.getfile(spins.material))
+            csv_file = os.path.join(path_dir, "csv_files", fname)
+            if not os.path.isfile(csv_file):
+                raise ValueError(
+                    "No csv file named %s or %s found." % (fname, csv_file))
+        index_data = pd.read_csv(csv_file, header=0)
+        if "wl" not in index_data.columns:
+            raise ValueError(
+                "Wavelengths not specified in csv file %s, or column not named \"wl\"."
+                % (index_element.mat_file))
+        if "n" not in index_data.columns:
+            raise ValueError(
+                "n not specified in csv file %s, or column not named \"n\"." %
+                (index_element.mat_file))
+        if "k" not in index_data.columns:
+            index_data["k"] = 0
+        if index_data.shape[1] > 3:
+            warnings.warn("Only using wavelength, n, and k data.")
+        mat_obj = material.CustomMaterial(
+            np.multiply(index_data["wl"].tolist(), NM_PER_UM),
+            index_data["n"].tolist(), index_data["k"].tolist())
+        index = mat_obj.refractive_index(np.array(wlen))[0]
     else:
         raise ValueError("No valid material.")
 
