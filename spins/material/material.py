@@ -1,13 +1,29 @@
 import numpy as np
 import scipy.interpolate
+from typing import List
 
 
 def reverse_arr(arr):
     return np.array(list(reversed(arr)))
 
 
+def interpolate_using_wavelengths(wavelengths: np.ndarray, wlens: List[float],
+                                  n: List[float], k: List[float]) -> np.ndarray:
+    """Interpolate the refractive index from n,k versus wavelength data.
+
+    Args:
+        wavelengths: Numpy array of wavelengths to inerpolate.
+        wlens: Wavelengths at which known data are specified.
+        n: Known refractive indices.
+        k: Known extinction coefficients.
+    """
+    n = scipy.interpolate.pchip_interpolate(wlens, n, wavelengths)
+    k = scipy.interpolate.pchip_interpolate(wlens, k, wavelengths)
+    return (n, k)
+
+
 def interpolate_using_energy(wavelengths, n, k, En, Ek):
-    """ Interpolate the refractive index from photon energy data.
+    """Interpolate the refractive index from photon energy data.
 
     Args:
         wavelengths: Numpy array of wavelengths to inerpolate (nm).
@@ -26,43 +42,52 @@ def interpolate_using_energy(wavelengths, n, k, En, Ek):
     return (n, k)
 
 
-class MaterialMeta(type):
-    # Create a metaclass in order to overload __call__ as a class method.
-    def __call__(self, wavelengths):
-        return self.refractive_index(wavelengths)
+class Material:
 
-
-class Material(metaclass=MaterialMeta):
-
-    @classmethod
-    def refractive_index(cls, wavelengths):
-        """ Returns the real and imaginary component of refractive index. """
+    def refractive_index(self, wavelengths):
+        """Returns the real and imaginary component of refractive index. """
         raise NotImplementedError('refractive_index not implemented.')
 
-    @classmethod
-    def eps_real(cls, wavelengths):
-        """ Returns real part of permittivity. """
-        n, k = cls.refractive_index(wavelengths)
+    def eps_real(self, wavelengths):
+        """Returns real part of permittivity. """
+        n, k = self.refractive_index(wavelengths)
         return n**2 - k**2
 
-    @classmethod
-    def eps(cls, wavelengths):
-        """ Returns complex permittivity. """
-        n, k = cls.refractive_index(wavelengths)
+    def eps(self, wavelengths):
+        """Returns complex permittivity. """
+        n, k = self.refractive_index(wavelengths)
         return (n - 1j * k)**2
+
+
+class CustomMaterial(Material):
+    """Specifies material from user-inputted refractive index data."""
+
+    def __init__(self, wlens: List[float], n: List[float], k: List[float]):
+        """Constructor to initialize material properties.
+        
+        Args:
+            wlens: Known wavelength data.
+            n: Known refractive indices.
+            k: Known extinction coefficients.
+        """
+        self.wlens = wlens
+        self.n = n
+        self.k = k
+
+    def refractive_index(self, wavelengths: List[float]) -> List[float]:
+        return interpolate_using_wavelengths(wavelengths, self.wlens, self.n,
+                                             self.k)
 
 
 class Air(Material):
 
-    @classmethod
-    def refractive_index(cls, wavelengths):
+    def refractive_index(self, wavelengths: List[float]) -> List[float]:
         return (np.ones_like(wavelengths), np.zeros_like(wavelengths))
 
 
 class SiO2(Material):
 
-    @classmethod
-    def refractive_index(cls, wavelengths):
+    def refractive_index(self, wavelengths: List[float]) -> List[float]:
         #SiO2 refractive index with respect to wavelength (wl, nm)
 
         # SOURCE: Palik, Handbook of Optical Constants of Solids, 1995
@@ -320,8 +345,7 @@ class SiO2(Material):
 
 class Si(Material):
 
-    @classmethod
-    def refractive_index(cls, wavelengths):
+    def refractive_index(self, wavelengths: List[float]) -> List[float]:
         #Si refractive index with respect to wavelength (wl, nm)
 
         # SOURCE: Palik, Handbook of Optical Constants of Solids, 1995
@@ -507,7 +531,6 @@ class Si3N4(Material):
         4.9e-3, 1.2e-3, 2.3e-4, 0, 0, 0, 0, 0, 0, 0, 0
     ]
 
-    @classmethod
-    def refractive_index(cls, wavelengths):
+    def refractive_index(self, wavelengths: List[float]) -> List[float]:
         return interpolate_using_energy(wavelengths, Si3N4.n, Si3N4.k, Si3N4.eV,
                                         Si3N4.eV)

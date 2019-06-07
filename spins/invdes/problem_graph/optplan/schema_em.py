@@ -19,9 +19,12 @@ class Material(schema_utils.Model):
     Attributes:
         mat_name: Name of a material. This needs to be a material defined in
             `spins.material`.
+        mat_file: Path of CSV containing wavelength (microns),n,k columns.
+            The format is the same as CSV's from refractiveindex.info.
         index: Refractive index value.
     """
     mat_name = types.StringType()
+    mat_file = types.StringType()
     index = types.PolyModelType(optplan.ComplexNumber)
 
 
