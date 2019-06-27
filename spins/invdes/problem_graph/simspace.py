@@ -1,3 +1,8 @@
+"""Defines the simulation space.
+
+This file defines the simulation space object `SimulationSpace` and its creator.
+"""
+
 import inspect
 import os
 from typing import List, NamedTuple, Optional, Tuple
@@ -30,6 +35,7 @@ class SimulationSpaceInstance(
 
 
 class SimulationSpace:
+    """Defines a simulation space."""
 
     def __init__(self, params: optplan.SimulationSpace, filepath: str):
         if params.mesh.type != "uniform":
@@ -184,29 +190,92 @@ def _create_edge_coords(sim_region: optplan.Box3d,
 def _create_grid(eps_spec: optplan.EpsilonSpec,
                  edge_coords: fdfd_tools.EdgeCoords, wlen: float,
                  ext_dir: gridlock.Direction, filepath: str) -> gridlock.Grid:
-    if eps_spec.type != "gds":
+    if eps_spec.type == "gds":
+        # Make grid object.
+        grid = gridlock.Grid(
+            edge_coords,
+            ext_dir=ext_dir,
+            initial=_get_mat_index(eps_spec.mat_stack.background, wlen)**2,
+            num_grids=3)
+
+        # Draw layers.
+        _draw_gds_on_grid(
+            gds_stack=eps_spec.mat_stack.stack,
+            grid=grid,
+            gds_path=os.path.join(filepath, eps_spec.gds),
+            wlen=wlen)
+
+        # Make epsilon.
+        grid.render()
+    elif eps_spec.type == "gds_mesh":
+        # Make grid object.
+        grid = gridlock.Grid(
+            edge_coords,
+            ext_dir=ext_dir,
+            initial=_get_mat_index(eps_spec.background, wlen)**2,
+            num_grids=3)
+
+        # Load GDS.
+        with open(os.path.join(filepath, eps_spec.gds), "rb") as gds_file:
+            gds = gdslib.GDSImport(gds_file)
+
+        # Draw meshes.
+        for mesh in eps_spec.mesh_list:
+            _draw_mesh_on_grid(mesh, grid, gds, wlen)
+
+        # Make epsilon.
+        grid.render()
+    else:
         raise NotImplementedError(
             "Epsilon spec not implemented for type {}".format(eps_spec.type))
-
-    # Make grid object.
-    grid = gridlock.Grid(
-        edge_coords,
-        ext_dir=ext_dir,
-        initial=_get_mat_index(eps_spec.mat_stack.background, wlen)**2,
-        num_grids=3)
-
-    # Draw layers.
-    _draw_gds_on_grid(
-        gds_stack=eps_spec.mat_stack.stack,
-        grid=grid,
-        gds_path=os.path.join(filepath, eps_spec.gds),
-        wlen=wlen)
-
-    # Make epsilon.
-    grid.render()
-
     # Return epsilon and dxes.
     return grid
+
+
+def _draw_mesh_on_grid(mesh: optplan.Mesh,
+                       grid: gridlock.Grid,
+                       gds: gdslib.GDSImport,
+                       wlen: Optional[float] = None) -> None:
+    """Draws a mesh onto a grid.
+
+    This is used to draw individual meshes onto a grid object.
+
+    Args:
+        mesh: Mesh to draw.
+        grid: Grid to draw on.
+        gds: GDS file from which to load polygons.
+        wlen: Wavelength to use use for materials.
+    """
+    eps_mat = _get_mat_index(mesh.material, wlen)**2
+    if mesh.type == "mesh.slab":
+        extents = np.array(mesh.extents)
+        center = extents.mean()
+        thickness = np.diff(extents)[0]
+
+        grid.draw_slab(
+            dir_slab=grid.ext_dir,
+            center=center,
+            thickness=thickness,
+            eps=eps_mat)
+
+    elif mesh.type == "mesh.gds_mesh":
+        layer = tuple(mesh.gds_layer)
+        polygons = gds.get_polygons(layer)
+        extents = np.array(mesh.extents)
+        center = extents.mean()
+        thickness = np.diff(extents)[0]
+        polygon_center = np.zeros(3)
+        polygon_center[grid.ext_dir] = center
+
+        for polygon in polygons:
+            polygon = np.around(polygon * NM_PER_UM)
+            grid.draw_polygon(
+                center=polygon_center,
+                polygon=polygon,
+                thickness=thickness,
+                eps=eps_mat)
+    else:
+        raise ValueError("Encountered unknown mesh type: {}".format(mesh.type))
 
 
 def _draw_gds_on_grid(gds_stack: List[optplan.GdsMaterialStackLayer],
@@ -295,8 +364,7 @@ def _get_mat_index(index_element: optplan.Material,
             csv_file = fname
         # Look for csv file in the material/csv_files directory.
         else:
-            import spins.material
-            path_dir = os.path.dirname(inspect.getfile(spins.material))
+            path_dir = os.path.dirname(inspect.getfile(material))
             csv_file = os.path.join(path_dir, "csv_files", fname)
             if not os.path.isfile(csv_file):
                 raise ValueError(
