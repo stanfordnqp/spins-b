@@ -82,6 +82,70 @@ class GdsEps(EpsilonSpec):
     stack_normal = optplan.vec3d()
 
 
+class Mesh(schema_utils.Model):
+    """Defines a mesh to draw.
+
+    Meshes are used to define permittivities through `GdsMeshEps`.
+    """
+
+
+@schema_utils.polymorphic_model()
+class GdsMesh(Mesh):
+    """Defines a mesh by using polygons from a GDS file.
+
+    The mesh is defined by extruding the polygon along the stack normal with
+    coordinates given by `extents`.
+
+    Attributes:
+        material: Material to use for mesh.
+        extents: Start and end location of mesh in the extrusion direction.
+        gds_layer: Tuple `(layer, datatype)` of the GDS file from which to
+            extract the polygons.
+    """
+    type = schema_utils.polymorphic_model_type("mesh.gds_mesh")
+    material = types.ModelType(Material)
+    extents = optplan.vec2d()
+    gds_layer = types.ListType(types.IntType())
+
+
+@schema_utils.polymorphic_model()
+class SlabMesh(Mesh):
+    """Defines a slab.
+
+    A slab is a rectangular prism that has a finite extent along the extrusion
+    axis and infinite extent in the other two directions. Slabs are commonly
+    used to draw a background permittivity distribution before drawing
+    other meshes.
+
+    Attributes:
+        material: Material to use for slab.
+        extents: Start and end location of slab in the extrusion direction.
+    """
+    type = schema_utils.polymorphic_model_type("mesh.slab")
+    material = types.ModelType(Material)
+    extents = optplan.vec3d()
+
+
+@schema_utils.polymorphic_model()
+class GdsMeshEps(EpsilonSpec):
+    """Defines a permittivity distribution by a lits of meshes.
+
+    The meshes are drawn in order of the list. Consequently, if meshes overlap,
+    the mesh drawn later will take precedence.
+
+    Attributes:
+        gds: GDS file to use for `GdsMesh` types.
+        background: Default background permittivity.
+        mesh_list: List of meshes to draw.
+        stack_normal: Direction considered the normal to the stack.
+    """
+    type = schema_utils.polymorphic_model_type("gds_mesh")
+    gds = types.StringType()
+    background = types.ModelType(Material)
+    mesh_list = types.ListType(types.ModelType(GdsMesh))
+    stack_normal = optplan.vec3d()
+
+
 @schema_utils.polymorphic_model()
 class ParamEps(EpsilonSpec):
     """Defines a permittivity distribution based on a parametriation.
