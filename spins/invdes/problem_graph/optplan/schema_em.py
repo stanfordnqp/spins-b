@@ -123,7 +123,7 @@ class SlabMesh(Mesh):
     """
     type = schema_utils.polymorphic_model_type("mesh.slab")
     material = types.ModelType(Material)
-    extents = optplan.vec3d()
+    extents = optplan.vec2d()
 
 
 @schema_utils.polymorphic_model()
@@ -142,7 +142,7 @@ class GdsMeshEps(EpsilonSpec):
     type = schema_utils.polymorphic_model_type("gds_mesh")
     gds = types.StringType()
     background = types.ModelType(Material)
-    mesh_list = types.ListType(types.ModelType(GdsMesh))
+    mesh_list = types.ListType(types.PolyModelType(Mesh))
     stack_normal = optplan.vec3d()
 
 
