@@ -44,12 +44,20 @@ def create_region_slices(
     grid_max = [v[-1] for v in grid.xyz]
 
     # Adjust min max.
-    xyz_min = [max(gr, sl) for gr, sl in zip(grid_min, xyz_min)]
-    xyz_max = [min(gr, sl) for gr, sl in zip(grid_max, xyz_max)]
+    xyz_min_clip = [max(gr, sl) for gr, sl in zip(grid_min, xyz_min)]
+    xyz_max_clip = [min(gr, sl) for gr, sl in zip(grid_max, xyz_max)]
 
     # Get the min and max indices.
-    xyz_ind_min = grid.pos2ind(xyz_min, which_shifts=None).astype(int)
-    xyz_ind_max = grid.pos2ind(xyz_max, which_shifts=None).astype(int)
+    xyz_ind_min = grid.pos2ind(xyz_min_clip, which_shifts=None).astype(int)
+    xyz_ind_max = grid.pos2ind(xyz_max_clip, which_shifts=None).astype(int)
+
+    # TODO(logansu): Revisit and consider whether `pos2ind` should allow
+    # out of bounds coordinates.
+    # Set slices correctly if clipped. The issue at hand here is that if
+    # `xyz_max` is out of bounds, we actually want to make sure the slice
+    # includes the border.
+    xyz_ind_min[xyz_min_clip > xyz_min] = 0
+    xyz_ind_max[xyz_max_clip < xyz_max] += 1
 
     # Make sure that slices are nonzero.
     for i in range(3):
