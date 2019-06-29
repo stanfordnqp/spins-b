@@ -123,6 +123,12 @@ class SimulationSpace:
                         eps_fg.grids,
                         return_param_dims=True,
                     ))
+            elif self._selmat_type == optplan.SelectionMatrixType.FULL_DIRECT.value:
+                self._design_dims = np.array(eps_fg.grids).shape
+                import scipy.sparse
+                selection_mat = scipy.sparse.diags(
+                    fdfd_tools.vec(
+                        np.array(eps_fg.grids) - np.array(eps_bg.grids)))
             elif self._selmat_type == optplan.SelectionMatrixType.REDUCED.value:
                 # TODO(logansu): Create selection matrix from design dims.
                 selection_mat, self._design_dims = (

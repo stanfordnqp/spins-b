@@ -202,6 +202,9 @@ class SelectionMatrixType(enum.Enum):
     # Direct lattice selection matrix where we select out all points in the
     # Yee grid.
     DIRECT = "direct_lattice"
+    # Same as `DIRECT` but permittivity values along the extrusion direction
+    # are not constrained to be equal to each other.
+    FULL_DIRECT = "full_direct"
     # Design dimensions is reduced by factor of 4 by parametrizing only the "z"
     # component.
     REDUCED = "uniform"
@@ -328,6 +331,7 @@ class PlaneWaveSource(optplan.EmSource):
     overwrite_bloch_vector = types.BooleanType()
     border = types.ListType(types.FloatType())
     power = types.FloatType()
+    normalize_by_sim = types.BooleanType(default=False)
 
 
 @optplan.register_node_type()
