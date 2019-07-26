@@ -51,10 +51,10 @@ class Grid:
     """
 
     # Intended for use as static constants
-    Yee_Shifts_E = 0.5 * np.array(
-        [[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=float)  # type: np.ndarray
-    Yee_Shifts_H = 0.5 * np.array(
-        [[0, 1, 1], [1, 0, 1], [1, 1, 0]], dtype=float)  # type: np.ndarray
+    Yee_Shifts_E = 0.5 * np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+                                  dtype=float)  # type: np.ndarray
+    Yee_Shifts_H = 0.5 * np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]],
+                                  dtype=float)  # type: np.ndarray
 
     @property
     def dxyz(self) -> List[np.ndarray]:
@@ -129,8 +129,7 @@ class Grid:
 
     def shifted_exyz(self,
                      which_shifts: int or None,
-                     which_grid: GridType = GridType.PRIM
-                    ) -> List[np.ndarray]:
+                     which_grid: GridType = GridType.PRIM) -> List[np.ndarray]:
         """
         Returns edges for which_shifts.
 
@@ -149,8 +148,7 @@ class Grid:
             # Adding ghost cell to the beginning if the complementary grid
             sexyz = [
                 np.append(self.exyz[a][0] - dxyz[a][-1] * shifts[a],
-                             self.exyz[a] + dxyz[a] * shifts[a])
-                for a in range(3)
+                          self.exyz[a] + dxyz[a] * shifts[a]) for a in range(3)
             ]
             # Removing the ghost cell if the compelementary grid is not shifted in a particular direction
             sexyz = [
@@ -160,8 +158,7 @@ class Grid:
 
     def shifted_dxyz(self,
                      which_shifts: int or None,
-                     which_grid: GridType = GridType.PRIM
-                    ) -> List[np.ndarray]:
+                     which_grid: GridType = GridType.PRIM) -> List[np.ndarray]:
         """
         Returns cell sizes for which_shifts.
 
@@ -194,8 +191,7 @@ class Grid:
 
     def shifted_xyz(self,
                     which_shifts: int or None,
-                    which_grid: GridType = GridType.PRIM
-                   ) -> List[np.ndarray]:
+                    which_grid: GridType = GridType.PRIM) -> List[np.ndarray]:
         """
         Returns cell centers for which_shifts.
 
@@ -265,7 +261,7 @@ class Grid:
             sexyz = self.shifted_exyz(which_shifts, which_grid)
             position = [
                 np.interp(ind[a],
-                             np.arange(sexyz[a].size) - 0.5, sexyz[a])
+                          np.arange(sexyz[a].size) - 0.5, sexyz[a])
                 for a in range(3)
             ]
         return np.array(position, dtype=float)
@@ -306,7 +302,7 @@ class Grid:
         grid_pos = zeros((3,))
         for a in range(3):
             xi = np.digitize(r[a],
-                                sexyz[a]) - 1  # Figure out which cell we're in
+                             sexyz[a]) - 1  # Figure out which cell we're in
             xi_clipped = np.clip(
                 xi, 0, sexyz[a].size - 2)  # Clip back into grid bounds
 
@@ -504,7 +500,7 @@ class Grid:
             )
         # Translating polygon by its center
         polygon_translated = polygon + np.tile(center[self.planar_dir],
-                                                  (polygon.shape[0], 1))
+                                               (polygon.shape[0], 1))
         self.list_polygons.append((polygon_translated, eps))
 
         # Adding the z-coordinates of the z-coordinates of the added layers
@@ -513,8 +509,8 @@ class Grid:
             center[self.ext_dir] + 0.5 * thickness
         ])
 
-    def draw_cuboid(self, center: np.ndarray, extent: np.ndarray,
-                    eps: float or List[float]):
+    def draw_cuboid(self, center: np.ndarray, extent: np.ndarray, eps: float or
+                    List[float]):
         """
         Draw a cuboid with permittivity epsilon
         """
@@ -537,9 +533,9 @@ class Grid:
 
         # Calculating the polygon corresponding to the drawn cuboid
         polygon = 0.5 * np.array(
-            [[-extent[self.planar_dir[0]], extent[self.planar_dir[1]]], [
-                extent[self.planar_dir[0]], extent[self.planar_dir[1]]
-            ], [extent[self.planar_dir[0]], -extent[self.planar_dir[1]]],
+            [[-extent[self.planar_dir[0]], extent[self.planar_dir[1]]],
+             [extent[self.planar_dir[0]], extent[self.planar_dir[1]]],
+             [extent[self.planar_dir[0]], -extent[self.planar_dir[1]]],
              [-extent[self.planar_dir[0]], -extent[self.planar_dir[1]]]],
             dtype=float)
 
@@ -548,9 +544,8 @@ class Grid:
         # Drawing polygon
         self.draw_polygon(center, polygon, thickness, eps)
 
-    def draw_cylinder(self, center: np.ndarray, radius: float,
-                      thickness: float, num_points: int, eps: float or
-                      np.ndarray):
+    def draw_cylinder(self, center: np.ndarray, radius: float, thickness: float,
+                      num_points: int, eps: float or np.ndarray):
         """
         Draw a cylinder with permittivity epsilon. By default, the axis of the cylinder
         is assumed to be along the extrusion direction
@@ -612,7 +607,7 @@ class Grid:
         dir_slab_par = np.delete(range(3), dir_slab)
         cuboid_cen = np.array(
             [self.center[a] if a != dir_slab else center for a in range(3)])
-        cuboid_extent = np.array([1.5*np.abs(self.exyz[a][-1]-self.exyz[a][0]) if a !=dir_slab \
+        cuboid_extent = np.array([2*np.abs(self.exyz[a][-1]-self.exyz[a][0]) if a !=dir_slab \
                                   else thickness for a in range(3)])
         self.draw_cuboid(cuboid_cen, cuboid_extent, eps)
 
@@ -648,9 +643,8 @@ class Grid:
 
         edge_lim = self.exyz[fill_dir][0] if fill_pol == -1 else self.exyz[
             fill_dir][-1]
-        cuboid_extent = np.insert(
-            surf_extent, fill_dir,
-            2 * np.abs(edge_lim - surf_center[fill_dir]))
+        cuboid_extent = np.insert(surf_extent, fill_dir,
+                                  2 * np.abs(edge_lim - surf_center[fill_dir]))
 
 
         cuboid_center = np.array([surf_center[a] if a != fill_dir else \
@@ -692,8 +686,7 @@ class Grid:
         """
 
         # Calculating the layer coordinates
-        self.layer_z = np.sort(
-            np.unique(np.array(self.list_z).flatten('F')))
+        self.layer_z = np.sort(np.unique(np.array(self.list_z).flatten('F')))
         self.layer_polygons = [[] for i in range(self.layer_z.size - 1)]
 
         # Assigning polynomials into layers
@@ -875,8 +868,8 @@ class Grid:
             ind_z_min = get_zi(z_min, which_shifts=n)
             ind_z_max = get_zi(z_max, which_shifts=n)
             corner_z_min = ind_z_min.astype(int)
-            corner_z_max = np.minimum(
-                ind_z_max + 1, self.shape[self.ext_dir] - 1).astype(int)
+            corner_z_max = np.minimum(ind_z_max + 1,
+                                      self.shape[self.ext_dir] - 1).astype(int)
             comp_corner_z_min = corner_z_min.astype(int)
             comp_corner_z_max = np.minimum(
                 corner_z_max + 1, comp_shape[self.ext_dir] - 1).astype(int)
@@ -895,8 +888,8 @@ class Grid:
             center_slice = [None for a in range(3)]
             center_slice[self.ext_dir] = np.s_[corner_z_min:corner_z_max + 1]
             for i in range(2):
-                center_slice[self.planar_dir[i]] = np.s_[corner_xy_min[
-                    i]:corner_xy_max[i] + 1]
+                center_slice[self.planar_dir[i]] = np.s_[corner_xy_min[i]:
+                                                         corner_xy_max[i] + 1]
 
             # Updating permittivity
             self.grids[n][tuple(center_slice)] += eps[n] * w
@@ -1014,7 +1007,7 @@ class Grid:
             center3, which_shifts, round_ind=False,
             check_bounds=False)[surface_normal]
         centers = np.unique([floor(center_index),
-                                ceil(center_index)]).astype(int)
+                             ceil(center_index)]).astype(int)
         if len(centers) == 2:
             fpart = center_index - floor(center_index)
             w = [1 - fpart, fpart]  # longer distance -> less weight
@@ -1114,12 +1107,11 @@ class Grid:
         verts, faces = skimage.measure.marching_cubes(grid, level)
 
         # Convert vertices from index to position
-        pos_verts = np.array(
-            [
-                self.ind2pos(verts[i, :], which_shifts, round_ind=False)
-                for i in range(verts.shape[0])
-            ],
-            dtype=float)
+        pos_verts = np.array([
+            self.ind2pos(verts[i, :], which_shifts, round_ind=False)
+            for i in range(verts.shape[0])
+        ],
+                             dtype=float)
         xs, ys, zs = (pos_verts[:, a] for a in range(3))
 
         # Draw the plot
