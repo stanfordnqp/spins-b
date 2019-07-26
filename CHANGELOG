@@ -1,0 +1,15 @@
+# Changelog
+We will try to document all notable changes in this file.
+
+## 2019-07-25
+### Added
+- Power transmission objective (optplan.PowerTransmission) that calculates total power passing through a plane via Poynting vector [@ludi1001]
+- DiffEpsilon accepts a GDS as a reference permittivity distribution [@vcruysse]
+- Custom material can be added via a CSV file [@jskarda]
+- Define simulation space using a list of 3D meshes (optplan.GdsMeshEps) [@ludi1001]
+- Use a full direct selection matrix that allows all permittivity values to vary [@ludi1001]
+
+### Changed
+- Fix bug for draw_slab in spins.gridlock.Grid that causes incorrect slab when drawing in 2D [@ludi1001]
+- Normalize plane wave source by simulation and set the Bloch vectory correctly [@ludi1001]
+
