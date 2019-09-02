@@ -1,4 +1,5 @@
 """Module for discrete parametrization for grating designs."""
+from typing import Dict
 import numpy as np
 import scipy.sparse.linalg as linalg
 
@@ -36,13 +37,19 @@ class GratingParam(parametrization.Parametrization):
     starting edge of the first pixel is at 0, and the width of each pixel is 1.
     """
 
-    def __init__(self, initial_value: np.ndarray, num_pixels: int) -> None:
+    def __init__(self,
+                 initial_value: np.ndarray,
+                 num_pixels: int,
+                 inverted: bool = False) -> None:
         """Creates a new `GratingParam` object.
 
         Args:
             initial_value: The initial value of the edges for the
                 parametrization.
             num_pixels: The number of pixels in the design region.
+            inverted: If `True`, invert the pixel values so that each of pair
+                of edges correspond to a "hole". That is, p_0 is a falling edge
+                and p_1 is a rising edge, etc.
 
         Raises:
             ValueError: If the number of edges (size of `initial_value`) is not
@@ -63,6 +70,8 @@ class GratingParam(parametrization.Parametrization):
         # compute the values of the `pixels` in the grating region. This grid
         # has edges at `[0, 1, 2 ... num_pixels]`.
         self._x_coords = np.arange(num_pixels + 1)
+
+        self._inverted = inverted
 
     def get_structure(self) -> np.ndarray:
         """Calculate the value of `z` from the edges.
@@ -88,6 +97,8 @@ class GratingParam(parametrization.Parametrization):
                 np.array([center - 0.5 * width, center + 0.5 * width]),
                 self._x_coords)
 
+        if self._inverted:
+            return 1 - pixel_vals
         return pixel_vals
 
     def calculate_gradient(self) -> linalg.LinearOperator:
@@ -142,6 +153,8 @@ class GratingParam(parametrization.Parametrization):
                 # `edge_dir` is 1 if the edge is a rising edge, and -1 if it
                 # is a falling edge.
                 edge_dir = 1 if edge_index % 2 == 0 else -1
+                if self._inverted:
+                    edge_dir = -edge_dir
                 # Compute the pixel index corresponding to `edge`.
                 pixel_index = np.floor(edge).astype(int)
                 # Update the `jac_vec_prod` only if the edge lies inside the
@@ -179,3 +192,16 @@ class GratingParam(parametrization.Parametrization):
             vector: The vector to be decoded.
         """
         self._edges = np.sort(vector)
+
+    def serialize(self) -> Dict:
+        serialized = super().serialize()
+        serialized.update({"inverted": self._inverted})
+        return serialized
+
+    def deserialize(self, data: Dict) -> None:
+        super().deserialize(data)
+
+        if "inverted" in data:
+            self._inverted = data["inverted"]
+        else:
+            self._inverted = False
