@@ -63,9 +63,13 @@ class GratingParametrization(optplan.Parametrization):
     Attributes:
         type: Must be "parametrization.grating_edge".
         simulation_space: Simulation space to use parametrization in.
+        inverted: If `True`, defines a grating where each pair of edges
+            correspond to a "hole". See
+            `spins.invdes.parametrization.GratingParam` for details.
     """
     type = schema_utils.polymorphic_model_type("parametrization.grating")
     simulation_space = optplan.ReferenceType(optplan.SimulationSpaceBase)
+    inverted = types.BooleanType(default=False)
 
 
 @optplan.register_node_type()
@@ -89,11 +93,14 @@ class GratingFeatureConstraint(optplan.Function):
         simulation_space: Used to extract the number of pixels in the design
             region.
         min_feature_size: Minimum feature size in nm.
+        boundary_constraint_scale: See `spins.invdes.problem.GratingConstraint`
+            for details.
     """
     type = schema_utils.polymorphic_model_type(
         "function.grating_feature_constraint")
     simulation_space = optplan.ReferenceType(optplan.SimulationSpaceBase)
     min_feature_size = types.FloatType()
+    boundary_constraint_scale = types.FloatType(default=2.0)
 
 
 @optplan.register_node_type()
