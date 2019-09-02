@@ -40,16 +40,22 @@ class GratingFeatureConstraint(problem.OptimizationFunction):
     constraints do not take into account the selection matrix.
     """
 
-    def __init__(self, min_feature: float) -> None:
+    def __init__(self, min_feature: float,
+                 boundary_constraint_scale: float = 2) -> None:
         """Creates new constraint object.
 
         Args:
             min_feature: Minimum feature size in terms of pixels.
+            boundary_constraint_scale: Sets the constraint between the edges
+                and the boundary in terms of multiples of the minimum feature
+                size. Left at the default, this is exactly constraints 2 and 3
+                described above.
         """
         if min_feature < 0:
             raise ValueError(
                 "Minimum feature must be positive, got {}".format(min_feature))
         self._min_feature = min_feature
+        self._edge_cons_scale = boundary_constraint_scale
 
     def calculate_objective_function(
             self, param: parametrization.Parametrization) -> np.ndarray:
@@ -106,8 +112,9 @@ class GratingFeatureConstraint(problem.OptimizationFunction):
         # Lower bounding the left and right edges. Note that we keep them at
         # least 2 times the minimum feature constraint because the selection
         # matrix at the edges may not be aligned to the grid.
-        constraints.append(-vec[0] + 2 * self._min_feature)
-        constraints.append(-grating_len + 2 * self._min_feature + vec[-1])
+        constraints.append(-vec[0] + self._edge_cons_scale * self._min_feature)
+        constraints.append(-grating_len +
+                           self._edge_cons_scale * self._min_feature + vec[-1])
         return constraints
 
     def _build_constraint_grads(self, vec: np.ndarray) -> List[np.ndarray]:

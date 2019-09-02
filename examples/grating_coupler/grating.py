@@ -294,7 +294,8 @@ def create_transformations(
     # a slightly larger feature size that what our target is (by factor of
     # `cont_to_disc_factor`). This is to give the optimization a bit more wiggle
     # room later on.
-    disc_param = optplan.GratingParametrization(simulation_space=sim_space)
+    disc_param = optplan.GratingParametrization(
+        simulation_space=sim_space, inverted=True)
     trans_list.append(
         optplan.Transformation(
             name="cont_to_disc",
@@ -314,7 +315,9 @@ def create_transformations(
                 constraints_ineq=[
                     optplan.GratingFeatureConstraint(
                         min_feature_size=min_feature,
-                        simulation_space=sim_space)
+                        simulation_space=sim_space,
+                        boundary_constraint_scale=1.0,
+                    )
                 ],
                 monitor_lists=optplan.ScipyOptimizerMonitorList(
                     callback_monitors=monitors,

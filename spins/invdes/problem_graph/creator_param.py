@@ -52,7 +52,9 @@ def create_grating_param(
                          "area, got {}".format(design_dims))
 
     grating_len = np.max(design_dims)
-    return parametrization.GratingParam([], num_pixels=grating_len)
+    return parametrization.GratingParam([],
+                                        num_pixels=grating_len,
+                                        inverted=params.inverted)
 
 
 @optplan.register_node(optplan.GratingFeatureConstraint)
@@ -60,15 +62,17 @@ def create_grating_feature_constraint(
         params: optplan.GratingFeatureConstraint,
         work: workspace.Workspace) -> problem.GratingFeatureConstraint:
     dx = work.get_object(params.simulation_space).dx
-    return problem.GratingFeatureConstraint(params.min_feature_size / dx)
+    return problem.GratingFeatureConstraint(
+        params.min_feature_size / dx,
+        boundary_constraint_scale=params.boundary_constraint_scale)
 
 
 @optplan.register_node(optplan.CubicParametrization)
 @optplan.register_node(optplan.HermiteLevelSetParametrization)
 def create_cubic_or_hermite_levelset(
         params: Union[optplan.CubicParametrization, optplan.
-                      HermiteLevelSetParametrization], work: workspace.Workspace
-) -> parametrization.CubicParam:
+                      HermiteLevelSetParametrization],
+        work: workspace.Workspace) -> parametrization.CubicParam:
     design_dims = work.get_object(params.simulation_space).design_dims
 
     # Calculate periodicity of the parametrization.
