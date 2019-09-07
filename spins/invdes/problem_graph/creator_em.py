@@ -113,6 +113,16 @@ class PlaneWaveSource:
             border=border,
             power=self._params.power)
 
+        # TODO(logansu): Figure out what's wrong with mixing PMLs and
+        # Bloch vector. It seems to create problems.
+        # For now, we manually set Bloch to zero is PML is nonzero.
+        if simspace.pml_layers[0] != 0 or simspace.pml_layers[1] != 0:
+            kvector[0] = 0
+        if simspace.pml_layers[2] != 0 or simspace.pml_layers[3] != 0:
+            kvector[1] = 0
+        if simspace.pml_layers[4] != 0 or simspace.pml_layers[5] != 0:
+            kvector[2] = 0
+
         if self._params.normalize_by_sim:
             source = fdfd_tools.free_space_sources.normalize_source_by_sim(
                 omega=2 * np.pi / wlen,
@@ -121,18 +131,11 @@ class PlaneWaveSource:
                 dxes=simspace.dxes,
                 pml_layers=simspace.pml_layers,
                 solver=solver,
-                power=self._params.power)
+                power=self._params.power,
+                bloch_vector=kvector,
+            )
 
         if self._params.overwrite_bloch_vector:
-            # TODO(logansu): Figure out what's wrong with mixing PMLs and
-            # Bloch vector. It seems to create problems.
-            # For now, we manually set Bloch to zero is PML is nonzero.
-            if simspace.pml_layers[0] != 0 or simspace.pml_layers[1] != 0:
-                kvector[0] = 0
-            if simspace.pml_layers[2] != 0 or simspace.pml_layers[3] != 0:
-                kvector[1] = 0
-            if simspace.pml_layers[4] != 0 or simspace.pml_layers[5] != 0:
-                kvector[2] = 0
             return source, kvector
         return source
 
