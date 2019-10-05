@@ -23,7 +23,6 @@ DIRECT_SOLVER = local_matrix_solvers.MultiprocessingSolver(
 
 @optplan.register_node(optplan.WaveguideModeSource)
 class WaveguideModeSource:
-
     def __init__(self,
                  params: optplan.WaveguideModeSource,
                  work: Optional[workspace.Workspace] = None) -> None:
@@ -63,7 +62,6 @@ class WaveguideModeSource:
 
 @optplan.register_node(optplan.PlaneWaveSource)
 class PlaneWaveSource:
-
     def __init__(self,
                  params: optplan.PlaneWaveSource,
                  work: Optional[workspace.Workspace] = None) -> None:
@@ -94,7 +92,10 @@ class PlaneWaveSource:
 
         # Calculate the border in gridpoints and igore the border if it's larger then the simulation.
         dx = simspace.dx
-        border = [int(b // dx) for b in self._params.border]
+        if self._params.border:
+            border = [int(b // dx) for b in self._params.border]
+        else:
+            border = [0, 0]
         # The plane wave is assumed to be in the z direction so the border is 0 for z.
         border.append(0)
 
@@ -142,7 +143,6 @@ class PlaneWaveSource:
 
 @optplan.register_node(optplan.GaussianSource)
 class GaussianSource:
-
     def __init__(self,
                  params: optplan.GaussianSource,
                  work: Optional[workspace.Workspace] = None) -> None:
@@ -154,8 +154,8 @@ class GaussianSource:
         """
         self._params = params
 
-    def __call__(self, simspace: SimulationSpace, wlen: float, solver: Callable,
-                 **kwargs) -> fdfd_tools.VecField:
+    def __call__(self, simspace: SimulationSpace, wlen: float,
+                 solver: Callable, **kwargs) -> fdfd_tools.VecField:
         """Creates the source vector.
 
         Args:
@@ -343,8 +343,8 @@ class FdfdSimulation(problem.OptimizationFunction):
             if cache_item is None:
                 continue
             cache_struc, cache_source, cache_fields = cache_item
-            if (np.array_equal(eps, cache_struc) and
-                    np.array_equal(source, cache_source)):
+            if (np.array_equal(eps, cache_struc)
+                    and np.array_equal(source, cache_source)):
                 electric_fields = cache_fields
                 # Remove the hit entry (it will be reinserted later).
                 del self._cache_adjoint[cache_index]
@@ -478,7 +478,8 @@ class Epsilon(problem.OptimizationFunction):
         # so the factor of 2 is cancelled out.
         return [
             np.real(
-                np.squeeze(np.asarray(grad_val @ self._space.selection_matrix)))
+                np.squeeze(
+                    np.asarray(grad_val @ self._space.selection_matrix)))
         ]
 
     def __str__(self):
@@ -496,7 +497,6 @@ def create_epsilon(params: optplan.Epsilon,
 
 @optplan.register_node(optplan.WaveguideModeOverlap)
 class WaveguideModeOverlap:
-
     def __init__(self,
                  params: optplan.WaveguideModeOverlap,
                  work: workspace.Workspace = None) -> None:

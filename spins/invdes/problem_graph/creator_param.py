@@ -165,7 +165,7 @@ class FabricationPenalty(problem.OptimizationFunction):
         '''
 
         self.d_gap = np.pi / fcon_gap
-        self.d_curv = 2 / fcon_curv
+        self.d_curv = np.pi / fcon_curv
         self.method = fabcon_method
 
         self.d_gap_factor = 1
