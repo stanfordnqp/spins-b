@@ -10,12 +10,15 @@ the past decade at Jelena Vuckovic's `Nanoscale and Quantum Photonics Lab <http:
 at Stanford University. For commercial use, the full version can be licensed
 through the `Stanford Office of Technology and Licensing <http://techfinder.stanford.edu/technologies/S18-012_inverse-design-software-for>`_ (see FAQ).
 
+The overall architecture is explained in our paper `Nanophotonic Inverse Design with SPINS: Software Architecture and Practical Considerations <https://arxiv.org/abs/1910.04829>`_. 
+
 
 Features
 --------
 - Gradient-based (adjoint) optimization of photonic devices
 - 2D and 3D device optimization using finite-difference frequency-domain (FDFD)
 - Support for custom objective functions, sources, and optimization methods
+- Automatically save design methodology and all hyperparameters used in optimization for reproducibility
 
 Overview
 --------
@@ -127,12 +130,7 @@ SPINS-B and cite the following papers:
 
 For general device optimization:
 
-- Piggott et al. Inverse design and demonstration of compact and broadband
-  wavelength demultiplexer. *Nat. Photonics* (2015).
-- Piggott et al. Fabrication-constrained nanophotonic design. *Sci. Rep.*
-  (2017).
-- Su et al. Inverse design and demonstration of a compact on-chip narrowband
-  three-channel wavelength demultiplexer. *ACS Photonics* (2018).
+- Su et al. Nanophotonic Inverse Design with SPINS: Software Architecture and Practical Considerations. *arXiv:1910.04829* (2019).
 
 For grating coupler optimization:
 
