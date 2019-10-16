@@ -11,13 +11,17 @@ $ python3 grating.py view save-folder
 
 To resume an optimization:
 $ python3 grating.py resume save-folder
+
+To generate a GDS file of the grating:
+$ python3 grating.py gen_gds save-folder
 """
 import os
+import pickle
 import shutil
 
 import gdspy
 import numpy as np
-from typing import List, Tuple
+from typing import List, NamedTuple, Tuple
 
 # `spins.invdes.problem_graph` contains the high-level spins code.
 from spins.invdes import problem_graph
@@ -25,9 +29,13 @@ from spins.invdes import problem_graph
 from spins.invdes.problem_graph import log_tools
 # `spins.invdes.problem_graph.optplan` contains the optimization plan schema.
 from spins.invdes.problem_graph import optplan
+from spins.invdes.problem_graph import workspace
+
+# If `True`, also minimize the back-reflection.
+MINIMIZE_BACKREFLECTION = True
 
 
-def run_opt(save_folder: str) -> None:
+def run_opt(save_folder: str, grating_len: float, wg_width: float) -> None:
     """Main optimization script.
 
     This function setups the optimization and executes it.
@@ -38,7 +46,6 @@ def run_opt(save_folder: str) -> None:
     os.makedirs(save_folder)
 
     wg_thickness = 220
-    grating_len = 12000
 
     sim_space = create_sim_space(
         "sim_fg.gds",
@@ -47,11 +54,11 @@ def run_opt(save_folder: str) -> None:
         box_thickness=2000,
         wg_thickness=wg_thickness,
         etch_frac=0.5,
-        visualize=True)
+        wg_width=wg_width)
     obj, monitors = create_objective(
         sim_space, wg_thickness=wg_thickness, grating_len=grating_len)
     trans_list = create_transformations(
-        obj, monitors, 50, 200, sim_space, min_feature=100)
+        obj, monitors, 60, 200, sim_space, min_feature=100)
     plan = optplan.OptimizationPlan(transformations=trans_list)
 
     # Save the optimization plan so we have an exact record of all the
@@ -66,6 +73,9 @@ def run_opt(save_folder: str) -> None:
     # the project folder. The project folder is the root folder for any
     # auxiliary files (e.g. GDS files).
     problem_graph.run_plan(plan, ".", save_folder=save_folder)
+
+    # Generate the GDS file.
+    gen_gds(save_folder, grating_len, wg_width)
 
 
 def create_sim_space(
@@ -148,9 +158,8 @@ def create_sim_space(
     gdspy.write_gds(gds_bg_name, [gds_bg], unit=1e-9, precision=1e-9)
 
     if visualize:
-        pass
-        #gdspy.LayoutViewer(cells=[gds_fg])
-        #gdspy.LayoutViewer(cells=[gds_bg])
+        gdspy.LayoutViewer(cells=[gds_fg])
+        gdspy.LayoutViewer(cells=[gds_bg])
 
     # The BOX layer/silicon device interface is set at `z = 0`.
     #
@@ -233,7 +242,6 @@ def create_sim_space(
         # To visualize permittivity distribution, we actually have to
         # construct the simulation space object.
         import matplotlib.pyplot as plt
-        from spins.invdes.problem_graph import workspace
         from spins.invdes.problem_graph.simspace import get_fg_and_bg
 
         context = workspace.Workspace()
@@ -313,23 +321,48 @@ def create_objective(
             center=[0, 0, 0],
         ))
 
-    overlap = optplan.Overlap(
-        simulation=sim,
-        overlap=optplan.WaveguideModeOverlap(
-            center=[-grating_len / 2 - 1000, 0, wg_thickness / 2],
-            extents=[0.0, 1500, 1500.0],
-            mode_num=0,
-            normal=[-1.0, 0.0, 0.0],
-            power=1.0,
-        ),
+    wg_overlap = optplan.WaveguideModeOverlap(
+        center=[-grating_len / 2 - 1000, 0, wg_thickness / 2],
+        extents=[0.0, 1500, 1500.0],
+        mode_num=0,
+        normal=[-1.0, 0.0, 0.0],
+        power=1.0,
     )
-
-    power = optplan.abs(overlap)**2
+    power = optplan.abs(optplan.Overlap(simulation=sim, overlap=wg_overlap))**2
     monitor_list.append(optplan.SimpleMonitor(name="mon_power", function=power))
 
-    # Spins minimizes the objective function, so to make `power` maximized,
-    # we minimize `1 - power`.
-    obj = 1 - power
+    if not MINIMIZE_BACKREFLECTION:
+        # Spins minimizes the objective function, so to make `power` maximized,
+        # we minimize `1 - power`.
+        obj = 1 - power
+    else:
+        # TODO: Use a Gaussian overlap to calculate power emitted by grating
+        # so we only need one simulation to handle backreflection and
+        # transmission.
+        refl_sim = optplan.FdfdSimulation(
+            source=optplan.WaveguideModeSource(
+                center=wg_overlap.center,
+                extents=wg_overlap.extents,
+                mode_num=0,
+                normal=[1, 0, 0],
+                power=1.0,
+            ),
+            solver="local_direct",
+            wavelength=wlen,
+            simulation_space=sim_space,
+            epsilon=epsilon,
+        )
+        refl_power = optplan.abs(
+            optplan.Overlap(simulation=refl_sim, overlap=wg_overlap))**2
+        monitor_list.append(
+            optplan.SimpleMonitor(name="mon_refl_power", function=refl_power))
+
+        # We now have two sub-objectives: Maximize transmission and minimize
+        # back-reflection, so we must an objective that defines the appropriate
+        # tradeoff between transmission and back-reflection. Here, we choose the
+        # simplest objective to do this, but you can use SPINS functions to
+        # design more elaborate objectives.
+        obj = (1 - power) + 4 * refl_power
 
     return obj, monitor_list
 
@@ -467,22 +500,71 @@ def resume_opt(save_folder: str) -> None:
     problem_graph.run_plan(plan, ".", save_folder=save_folder, resume=True)
 
 
+def gen_gds(save_folder: str, grating_len: float, wg_width: float) -> None:
+    """Generates a GDS file of the grating.
+
+    Args:
+        save_folder: Location where log files are saved. It is assumed that
+            the optimization plan is also saved there.
+        grating_len: Length of the grating.
+        wg_width: Width of the grating/bus waveguide.
+    """
+    # Load the optimization plan.
+    with open(os.path.join(save_folder, "optplan.json")) as fp:
+        plan = optplan.loads(fp.read())
+    dx = plan.transformations[-1].parametrization.simulation_space.mesh.dx
+
+    # Load the data from the latest log file.
+    with open(workspace.get_latest_log_file(save_folder), "rb") as fp:
+        log_data = pickle.load(fp)
+        if log_data["transformation"] != plan.transformations[-1].name:
+            raise ValueError("Optimization did not run until completion.")
+
+        coords = log_data["parametrization"]["vector"] * dx
+
+        if plan.transformations[-1].parametrization.inverted:
+            coords = np.insert(coords, 0, 0, axis=0)
+            coords = np.insert(coords, -1, grating_len, axis=0)
+
+    # `coords` now contains the location of the grating edges. Now draw a
+    # series of rectangles to represent the grating.
+    grating_poly = []
+    for i in range(0, len(coords), 2):
+        grating_poly.append(
+            ((coords[i], -wg_width / 2), (coords[i], wg_width / 2),
+             (coords[i + 1], wg_width / 2), (coords[i + 1], -wg_width / 2)))
+
+    # Save the grating to `grating.gds`.
+    grating = gdspy.Cell("GRATING", exclude_from_current=True)
+    grating.add(gdspy.PolygonSet(grating_poly, 100))
+    gdspy.write_gds(
+        os.path.join(save_folder, "grating.gds"), [grating],
+        unit=1.0e-9,
+        precision=1.0e-9)
+
+
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "action",
-        choices=("run", "view", "resume"),
+        choices=("run", "view", "resume", "gen_gds"),
         help="Must be either \"run\" to run an optimization, \"view\" to "
-        "view the results, or \"resume\" to resume an optimization.")
+        "view the results, \"resume\" to resume an optimization, or "
+        "\"gen_gds\" to generate the grating GDS file.")
     parser.add_argument(
         "save_folder", help="Folder containing optimization logs.")
 
+    grating_len = 12000
+    wg_width = 12000
+
     args = parser.parse_args()
     if args.action == "run":
-        run_opt(args.save_folder)
+        run_opt(args.save_folder, grating_len=grating_len, wg_width=wg_width)
     elif args.action == "view":
         view_opt(args.save_folder)
     elif args.action == "resume":
         resume_opt(args.save_folder)
+    elif args.action == "gen_gds":
+        gen_gds(args.save_folder, grating_len=grating_len, wg_width=wg_width)
