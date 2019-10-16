@@ -13,7 +13,9 @@ To resume an optimization:
 $ python3 grating.py resume save-folder
 """
 import os
+import shutil
 
+import gdspy
 import numpy as np
 from typing import List, Tuple
 
@@ -35,13 +37,19 @@ def run_opt(save_folder: str) -> None:
     """
     os.makedirs(save_folder)
 
+    wg_thickness = 220
+    grating_len = 12000
+
     sim_space = create_sim_space(
         "sim_fg.gds",
         "sim_bg.gds",
+        grating_len=grating_len,
         box_thickness=2000,
-        wg_thickness=220,
-        etch_frac=0.5)
-    obj, monitors = create_objective(sim_space)
+        wg_thickness=wg_thickness,
+        etch_frac=0.5,
+        visualize=True)
+    obj, monitors = create_objective(
+        sim_space, wg_thickness=wg_thickness, grating_len=grating_len)
     trans_list = create_transformations(
         obj, monitors, 50, 200, sim_space, min_feature=100)
     plan = optplan.OptimizationPlan(transformations=trans_list)
@@ -50,6 +58,9 @@ def run_opt(save_folder: str) -> None:
     # parameters.
     with open(os.path.join(save_folder, "optplan.json"), "w") as fp:
         fp.write(optplan.dumps(plan))
+    # Copy over the GDS files.
+    shutil.copyfile("sim_fg.gds", os.path.join(save_folder, "sim_fg.gds"))
+    shutil.copyfile("sim_bg.gds", os.path.join(save_folder, "sim_bg.gds"))
 
     # Execute the optimization and indicate that the current folder (".") is
     # the project folder. The project folder is the root folder for any
@@ -58,11 +69,17 @@ def run_opt(save_folder: str) -> None:
 
 
 def create_sim_space(
-        gds_fg: str,
-        gds_bg: str,
-        box_thickness: float = 2000,
-        wg_thickness: float = 220,
+        gds_fg_name: str,
+        gds_bg_name: str,
+        grating_len: float = 12000,
         etch_frac: float = 0.5,
+        box_thickness: float = 2000,
+        wg_width: float = 12000,
+        wg_thickness: float = 220,
+        buffer_len: float = 1500,
+        dx: int = 40,
+        num_pmls: int = 10,
+        visualize: bool = False,
 ) -> optplan.SimulationSpace:
     """Creates the simulation space.
 
@@ -70,16 +87,71 @@ def create_sim_space(
     gridding, and design region of the simulation.
 
     Args:
-        gds_fg: Location of the foreground GDS file.
-        gds_bg: Location of the background GDS file.
-        box_thickness: Thickness of BOX layer in nm.
-        wg_thickness: Thickness of the waveguide.
+        gds_fg_name: Location to save foreground GDS.
+        gds_bg_name: Location to save background GDS.
+        grating_len: Length of the grating coupler and design region.
         etch_frac: Etch fraction of the grating. 1.0 indicates a fully-etched
             grating.
+        box_thickness: Thickness of BOX layer in nm.
+        wg_thickness: Thickness of the waveguide.
+        wg_width: Width of the waveguide.
+        buffer_len: Buffer distance to put between grating and the end of the
+            simulation region. This excludes PMLs.
+        dx: Grid spacing to use.
+        num_pmls: Number of PML layers to use on each side.
+        visualize: If `True`, draws the polygons of the GDS file.
 
     Returns:
         A `SimulationSpace` description.
     """
+    # Calculate the simulation size, including  PMLs
+    sim_size = [
+        grating_len + 2 * buffer_len + dx * num_pmls,
+        wg_width + 2 * buffer_len + dx * num_pmls
+    ]
+    # First, we use `gdspy` to draw the waveguides and shapes that we would
+    # like to use. Instead of programmatically generating a GDS file using
+    # `gdspy`, we could also simply provide a GDS file (e.g. drawn using
+    # KLayout).
+
+    # Declare some constants to represent the different layers.
+    LAYER_SILICON_ETCHED = 100
+    LAYER_SILICON_NONETCHED = 101
+
+    # Create rectangles corresponding to the waveguide, the BOX layer, and the
+    # design region. We extend the rectangles outside the simulation region
+    # by multiplying locations by a factor of 1.1.
+
+    # We distinguish between the top part of the waveguide (which is etched)
+    # and the bottom part of the waveguide (which is not etched).
+    waveguide_top = gdspy.Rectangle((-1.1 * sim_size[0] / 2, -wg_width / 2),
+                                    (-grating_len / 2, wg_width / 2),
+                                    LAYER_SILICON_ETCHED)
+    waveguide_bottom = gdspy.Rectangle((-1.1 * sim_size[0] / 2, -wg_width / 2),
+                                       (grating_len / 2, wg_width / 2),
+                                       LAYER_SILICON_NONETCHED)
+    design_region = gdspy.Rectangle((-grating_len / 2, -wg_width / 2),
+                                    (grating_len / 2, wg_width / 2),
+                                    LAYER_SILICON_ETCHED)
+
+    # Generate the foreground and background GDS files.
+    gds_fg = gdspy.Cell("FOREGROUND", exclude_from_current=True)
+    gds_fg.add(waveguide_top)
+    gds_fg.add(waveguide_bottom)
+    gds_fg.add(design_region)
+
+    gds_bg = gdspy.Cell("BACKGROUND", exclude_from_current=True)
+    gds_bg.add(waveguide_top)
+    gds_bg.add(waveguide_bottom)
+
+    gdspy.write_gds(gds_fg_name, [gds_fg], unit=1e-9, precision=1e-9)
+    gdspy.write_gds(gds_bg_name, [gds_bg], unit=1e-9, precision=1e-9)
+
+    if visualize:
+        pass
+        #gdspy.LayoutViewer(cells=[gds_fg])
+        #gdspy.LayoutViewer(cells=[gds_bg])
+
     # The BOX layer/silicon device interface is set at `z = 0`.
     #
     # Describe materials in each layer.
@@ -118,14 +190,14 @@ def create_sim_space(
             optplan.GdsMaterialStackLayer(
                 foreground=optplan.Material(mat_name="Si"),
                 background=optplan.Material(mat_name="SiO2"),
-                gds_layer=[100, 0],
+                gds_layer=[LAYER_SILICON_NONETCHED, 0],
                 extents=[0, wg_thickness * (1 - etch_frac)],
             ))
     stack.append(
         optplan.GdsMaterialStackLayer(
             foreground=optplan.Material(mat_name="Si"),
             background=optplan.Material(mat_name="SiO2"),
-            gds_layer=[101, 0],
+            gds_layer=[LAYER_SILICON_ETCHED, 0],
             extents=[wg_thickness * (1 - etch_frac), wg_thickness],
         ))
 
@@ -140,36 +212,65 @@ def create_sim_space(
     sim_z_end = wg_thickness + 1500
 
     # Create a simulation space for both continuous and discrete optimization.
-    dx = 40
-    return optplan.SimulationSpace(
+    simspace = optplan.SimulationSpace(
         name="simspace",
         mesh=optplan.UniformMesh(dx=dx),
-        eps_fg=optplan.GdsEps(gds=gds_fg, mat_stack=mat_stack),
-        eps_bg=optplan.GdsEps(gds=gds_bg, mat_stack=mat_stack),
+        eps_fg=optplan.GdsEps(gds=gds_fg_name, mat_stack=mat_stack),
+        eps_bg=optplan.GdsEps(gds=gds_bg_name, mat_stack=mat_stack),
         # Note that we explicitly set the simulation region. Anything
         # in the GDS file outside of the simulation extents will not be drawn.
         sim_region=optplan.Box3d(
             center=[0, 0, (sim_z_start + sim_z_end) / 2],
-            extents=[16000, dx, sim_z_end - sim_z_start],
+            extents=[sim_size[0], dx, sim_z_end - sim_z_start],
         ),
         selection_matrix_type="uniform",
-        # Here we are specifying periodic boundary conditions (Bloch boundary
-        # conditions with zero k-vector).
-        boundary_conditions=[optplan.BlochBoundary()] * 6,
         # PMLs are applied on x- and z-axes. No PMLs are applied along y-axis
         # because it is the axis of translational symmetry.
-        pml_thickness=[10, 10, 0, 0, 10, 10],
+        pml_thickness=[num_pmls, num_pmls, 0, 0, num_pmls, num_pmls],
     )
 
+    if visualize:
+        # To visualize permittivity distribution, we actually have to
+        # construct the simulation space object.
+        import matplotlib.pyplot as plt
+        from spins.invdes.problem_graph import workspace
+        from spins.invdes.problem_graph.simspace import get_fg_and_bg
 
-def create_objective(sim_space: optplan.SimulationSpace
-                    ) -> Tuple[optplan.Function, List[optplan.Monitor]]:
+        context = workspace.Workspace()
+        eps_fg, eps_bg = get_fg_and_bg(context.get_object(simspace), wlen=1550)
+
+        def plot(x):
+            plt.imshow(np.abs(x)[:, 0, :].T.squeeze(), origin="lower")
+
+        plt.figure()
+        plt.subplot(3, 1, 1)
+        plot(eps_fg[2])
+        plt.title("eps_fg")
+
+        plt.subplot(3, 1, 2)
+        plot(eps_bg[2])
+        plt.title("eps_bg")
+
+        plt.subplot(3, 1, 3)
+        plot(eps_fg[2] - eps_bg[2])
+        plt.title("design region")
+        plt.show()
+    return simspace
+
+
+def create_objective(
+        sim_space: optplan.SimulationSpace,
+        wg_thickness: float,
+        grating_len: float,
+) -> Tuple[optplan.Function, List[optplan.Monitor]]:
     """Creates an objective function.
 
     The objective function is what is minimized during the optimization.
 
     Args:
         sim_space: The simulation space description.
+        wg_thickness: Thickness of waveguide.
+        grating_len: Length of grating.
 
     Returns:
         A tuple `(obj, monitor_list)` where `obj` is an objectivce function that
@@ -192,7 +293,7 @@ def create_objective(sim_space: optplan.SimulationSpace
             polarization_angle=np.pi / 2,
             theta=0,
             psi=0,
-            center=[0, 0, 920],
+            center=[0, 0, wg_thickness + 700],
             extents=[14000, 14000, 0],
             normal=[0, 0, -1],
             power=1,
@@ -215,7 +316,7 @@ def create_objective(sim_space: optplan.SimulationSpace
     overlap = optplan.Overlap(
         simulation=sim,
         overlap=optplan.WaveguideModeOverlap(
-            center=[-7000, 0, 110.0],
+            center=[-grating_len / 2 - 1000, 0, wg_thickness / 2],
             extents=[0.0, 1500, 1500.0],
             mode_num=0,
             normal=[-1.0, 0.0, 0.0],

@@ -32,8 +32,8 @@ class Workspace:
     """
 
     def __init__(self,
-                 filepath: str = None,
-                 savepath: str = None,
+                 filepath: str = ".",
+                 savepath: str = ".",
                  nodes: Optional[Union[optplan.ProblemGraphNode, List[
                      optplan.ProblemGraphNode]]] = None) -> None:
         """Initializes the workspace.
