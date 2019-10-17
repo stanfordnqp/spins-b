@@ -17,3 +17,7 @@ We will try to document all notable changes in this file.
 ### Changed
 - Grating parametrization allows the grating specification to be inverted so that the first edge is a falling edge [@ludi1001]
 - Grating parametrization constraints allows the constraint between the boundary of design area and first/last grating edge to be controlled [@ludi1001]
+
+## 2019-10-16
+### Changed
+- Grating example has more features: GDS generation, foreground/background GDS generated programmatically, minimize backreflection objective [@ludi1001]
