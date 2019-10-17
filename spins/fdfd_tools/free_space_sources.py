@@ -449,6 +449,7 @@ def normalize_source_by_sim(
         pml_layers: fdfd_tools.PmlLayers,
         solver: Callable,
         power: float,
+        bloch_vector: List[float] = [0, 0, 0],
 ) -> List[np.ndarray]:
     """Normalizes a source by running a simulation.
 
@@ -467,6 +468,7 @@ def normalize_source_by_sim(
         pml_layers: Number of PML layers to apply on boundary.
         solver: Solver to use to run normalization simulation.
         power: Power that normalized source should emit.
+        bloch_vector: Bloch vector to apply on simulation.
 
     Returns:
         Source that emits `power` in uniform media.
@@ -485,6 +487,7 @@ def normalize_source_by_sim(
         epsilon=fdfd_tools.vec(eps_uniform),
         pml_layers=pml_layers,
         J=fdfd_tools.vec(source),
+        bloch_vec=bloch_vector,
     )
     J_dot_E = -np.real(np.conj(fdfd_tools.vec(source)) * electric_fields)
     # TODO(logansu): Make this work for nonuniform meshes.
