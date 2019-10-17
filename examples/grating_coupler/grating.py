@@ -9,6 +9,9 @@ $ python3 grating.py run save-folder
 To view results:
 $ python3 grating.py view save-folder
 
+To see optimization status quickly:
+$ python3 grating.py view_quick save-folder
+
 To resume an optimization:
 $ python3 grating.py resume save-folder
 
@@ -32,7 +35,7 @@ from spins.invdes.problem_graph import optplan
 from spins.invdes.problem_graph import workspace
 
 # If `True`, also minimize the back-reflection.
-MINIMIZE_BACKREFLECTION = True
+MINIMIZE_BACKREFLECTION = False
 
 
 def run_opt(save_folder: str, grating_len: float, wg_width: float) -> None:
@@ -296,11 +299,12 @@ def create_objective(
     )
     monitor_list.append(optplan.FieldMonitor(name="mon_eps", function=epsilon))
 
+    # Add a Gaussian source that is angled at 10 degrees.
     sim = optplan.FdfdSimulation(
         source=optplan.GaussianSource(
-            polarization_angle=np.pi / 2,
-            theta=0,
-            psi=0,
+            polarization_angle=0,
+            theta=np.deg2rad(-10),
+            psi=np.pi / 2,
             center=[0, 0, wg_thickness + 700],
             extents=[14000, 14000, 0],
             normal=[0, 0, -1],
@@ -481,6 +485,23 @@ def view_opt(save_folder: str) -> None:
     log_tools.plot_monitor_data(log_df, monitor_descriptions)
 
 
+def view_opt_quick(save_folder: str) -> None:
+    """Prints the current result of the optimization.
+
+    Unlike `view_opt`, which plots fields and optimization trajectories,
+    `view_opt_quick` prints out scalar monitors in the latest log file. This
+    is useful for having a quick look into the state of the optimization.
+
+    Args:
+        save_folder: Location where the log files are saved.
+    """
+    with open(workspace.get_latest_log_file(save_folder), "rb") as fp:
+        log_data = pickle.load(fp)
+        for key, data in log_data["monitor_data"].items():
+            if np.isscalar(data):
+                print("{}: {}".format(key, data.squeeze()))
+
+
 def resume_opt(save_folder: str) -> None:
     """Resumes a stopped optimization.
 
@@ -549,7 +570,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "action",
-        choices=("run", "view", "resume", "gen_gds"),
+        choices=("run", "view", "view_quick", "resume", "gen_gds"),
         help="Must be either \"run\" to run an optimization, \"view\" to "
         "view the results, \"resume\" to resume an optimization, or "
         "\"gen_gds\" to generate the grating GDS file.")
@@ -564,6 +585,8 @@ if __name__ == "__main__":
         run_opt(args.save_folder, grating_len=grating_len, wg_width=wg_width)
     elif args.action == "view":
         view_opt(args.save_folder)
+    elif args.action == "view_quick":
+        view_opt_quick(args.save_folder)
     elif args.action == "resume":
         resume_opt(args.save_folder)
     elif args.action == "gen_gds":
