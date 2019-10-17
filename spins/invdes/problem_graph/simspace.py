@@ -396,3 +396,28 @@ def _get_mat_index(index_element: optplan.Material,
         raise ValueError("No valid material.")
 
     return index
+
+
+def get_fg_and_bg(simspace: SimulationSpace, wlen: float
+                 ) -> Tuple[fdfd_tools.VecField, fdfd_tools.VecField]:
+    """Quick utility function to construct the fg and bg permittivities.
+
+    Args:
+        simspace: SimulationSpace object.
+        wlen: Wavelength to plot simulation space.
+
+    Returns:
+        A tuple `(eps_fg, eps_bg)` where `eps_fg` is the permittivity if the
+        structure vector is all ones and `eps_bg` is the permittivity if the
+        structure vector is all zeros.
+    """
+    simspace_inst = simspace(wlen)
+    # Number of elements in structure vector.
+    num_el = simspace_inst.selection_matrix.shape[1]
+
+    eps_bg = fdfd_tools.vec(simspace_inst.eps_bg.grids)
+    eps_fg = eps_bg + simspace_inst.selection_matrix @ np.ones(num_el)
+
+    # Reshape into the appropriate size.
+    return fdfd_tools.unvec(eps_fg, simspace.dims), fdfd_tools.unvec(
+        eps_bg, simspace.dims)
