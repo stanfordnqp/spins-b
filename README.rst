@@ -54,7 +54,7 @@ Simply clone the SPINS-B repository and run :code:`pip`:
 
 .. code:: bash
 
-   $ pip install ./spins-b
+   $ pip3 install ./spins-b
 
 Getting Started
 ---------------
