@@ -294,7 +294,7 @@ Likewise, the minimum feature size in the optimization is set here as well.
 
 note:: 
 
-    SPINS utilizes continuous relaxation in optimization. This means that there is a first stage of optimization where the device permittivity is allowed to vary continuously between the material/cladding value. This final result of this stage acts as a seed for the discrete optimization. In this second stage, a fabricable design is produced. In our experience, allowing 100 iterations for each stage results in optimizations which are allowed to converge to local minima.
+    Spins-B utilizes continuous relaxation in optimization. This means that there is a first stage of optimization where the device permittivity is allowed to vary continuously between the material/cladding value. This final result of this stage acts as a seed for the discrete optimization. In this second stage, a fabricable design is produced. In our experience, 100 iterations for each stage is sufficient to reach a local minima.
 
 Additional information
 ----------------------
@@ -364,7 +364,7 @@ Setting this flag to :code:`True` activates:
     # We now have two sub-objectives: Maximize transmission and minimize
     # back-reflection, so we must an objective that defines the appropriate
     # tradeoff between transmission and back-reflection. Here, we choose the
-    # simplest objective to do this, but you can use SPINS functions to
+    # simplest objective to do this, but you can use Spins-B functions to
     # design more elaborate objectives.
     obj = (1 - power) + 4 * refl_power
 
