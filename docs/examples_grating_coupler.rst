@@ -62,12 +62,22 @@ To get text-only output , run :code:`view_quick` instead:
 Generate GDS
 ************ 
 
+A GDS file (named :code:`grating.gds`) is automatically generated in the :code:`save-folder` at the end of an optimization.
+
 We generate a 2d design by extruding the 1D optimized grating coupler design. In the example file the extrude length is 12 um. To generate this GDS we run:
 
 .. code-block:: python
 
-    python3 grating.py gen_gds save-folder
+    python3 grating.py gen_gds save-folder-name
 
+Resume optimization
+*******************
+
+If for some reason an optimization is terminated, it can be resumed by running:
+
+.. code-block:: python
+
+    python3 grating.py resume save-folder
 
 Modifying grating coupler parameters
 ------------------------------------
@@ -114,7 +124,11 @@ The substrate and buried oxide layer are first set:
         ),
     ]
 
-and so adjusting the box_thickness earlier is the only change we need to make. As for the grating coupler, we look at the elements appended to this stack array below. Pre-defined materials in Spins-B are :code:`"Air"`, :code:`"SiO2"`, :code:`"Si"`, :code:`"Si3N4"`. For greatest generality, we'll define a custom material for the silicon nitride in this example where we set the real part of the index to be 2.0 and the imaginary (loss) to be 0.0. 
+and so adjusting the :code:`box_thickness` earlier is the only change we need to make. As for the grating coupler, we look at the elements appended to this stack array below. Pre-defined materials in Spins-B are :code:`"Air"`, :code:`"SiO2"`, :code:`"Si"`, :code:`"Si3N4"`. For greatest generality, we'll define a custom material for the silicon nitride in this example where we set the real part of the index to be 2.0 and the imaginary (loss) to be 0.0. 
+
+.. note:: 
+
+    In addition to specifying a single refractive index value, a custom material can be added as well which interpolates dispersion from provided data. Reference :code:`optplan.Material` for more information.
 
 .. code-block:: python
 
@@ -146,6 +160,10 @@ In addition, we change the background material to be :code:`"Air"` as our gratin
         stack=stack,
     )
 
+.. note:: 
+
+    You can set the :code:`visualize` flag in the :code:`create_sim_space` function to :code:`True` to visualize the material stack to ensure it has been built correctly.
+
 
 Grating parameters
 ******************
@@ -163,7 +181,7 @@ We set the partial etch depth earlier, but to re-iterate, we can adjust this val
             etch_frac=0.6,
             wg_width=wg_width)
     
-We see reference to grating_len here, and accordingly this variable can be adjusted as well. This is set at the bottom of the example file in the :code:`__main__` function call:
+We see reference to :code:`grating_len` here, and accordingly this variable can be adjusted as well. This is set at the bottom of the example file in the :code:`__main__` function call:
 
 .. code-block:: python
 
@@ -251,7 +269,7 @@ For this modification, the only change we want is normal incidence (:code:`theta
 Optimization parameters
 ***********************
 
-Optimization parameters are set in the create_transformation function with the following behavior:
+Optimization parameters are set in the :code:`create_transformation` function with the following behavior:
 
 .. code-block:: python
 
@@ -274,6 +292,9 @@ Accordingly, to change the number of continuous or discrete optimzation iteratio
 
 Likewise, the minimum feature size in the optimization is set here as well.
 
+note:: 
+
+    SPINS utilizes continuous relaxation in optimization. This means that there is a first stage of optimization where the device permittivity is allowed to vary continuously between the material/cladding value. This final result of this stage acts as a seed for the discrete optimization. In this second stage, a fabricable design is produced. In our experience, allowing 100 iterations for each stage results in optimizations which are allowed to converge to local minima.
 
 Additional information
 ----------------------
@@ -316,9 +337,9 @@ Minimizing back reflections is set by simply turning on the flag at the beginnin
 .. code-block:: python
 
     # If `True`, also minimize the back-reflection.
-    MINIMIZE_BACKREFLECTION = False
+    MINIMIZE_BACKREFLECTION = True
     
-For more details, what this flag does is activate the following branch of the code:
+Setting this flag to :code:`True` activates:
 
 .. code-block:: python
 
