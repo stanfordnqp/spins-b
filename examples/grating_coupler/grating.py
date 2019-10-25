@@ -160,10 +160,6 @@ def create_sim_space(
     gdspy.write_gds(gds_fg_name, [gds_fg], unit=1e-9, precision=1e-9)
     gdspy.write_gds(gds_bg_name, [gds_bg], unit=1e-9, precision=1e-9)
 
-    if visualize:
-        gdspy.LayoutViewer(cells=[gds_fg])
-        gdspy.LayoutViewer(cells=[gds_bg])
-
     # The BOX layer/silicon device interface is set at `z = 0`.
     #
     # Describe materials in each layer.
