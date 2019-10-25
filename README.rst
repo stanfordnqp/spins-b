@@ -15,6 +15,10 @@ through the `Stanford Office of Technology and Licensing <http://techfinder.stan
 
 The overall architecture is explained in our paper `Nanophotonic Inverse Design with SPINS: Software Architecture and Practical Considerations <https://arxiv.org/abs/1910.04829>`_. 
 
+Documentation
+-------------
+`spins-b.readthedocs.io documentation <http://spins-b.readthedocs.io>`_ in progress.
+
 
 Features
 --------
