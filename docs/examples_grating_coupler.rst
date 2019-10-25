@@ -62,7 +62,7 @@ To get text-only output , run :code:`view_quick` instead:
 Generate GDS
 ************ 
 
-A GDS file (named :code:`grating.gds`) is automatically generated in the :code:`save-folder` at the end of an optimization.
+A GDS file (named :code:`grating.gds`) is automatically generated in the :code:`save-folder-name` at the end of an optimization.
 
 We generate a 2d design by extruding the 1D optimized grating coupler design. In the example file the extrude length is 12 um. To generate this GDS we run:
 
@@ -77,7 +77,7 @@ If for some reason an optimization is terminated, it can be resumed by running:
 
 .. code-block:: python
 
-    python3 grating.py resume save-folder
+    python3 grating.py resume save-folder-name
 
 Modifying grating coupler parameters
 ------------------------------------
@@ -306,7 +306,7 @@ Once an optimization has completed in the discretization stage, a GDS file can b
 
 .. code-block:: python
 
-    python3 grating.py gen_gds save-folder
+    python3 grating.py gen_gds save-folder-name
 
 The 1D optimized design is simply extruded to provide a 2D design. The extrude length is determined by the :code:`wg_width` variable set in the :code:`__main__` function:
 
