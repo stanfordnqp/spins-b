@@ -1,6 +1,9 @@
 .. image:: https://travis-ci.com/stanfordnqp/spins-b.svg?branch=master
     :target: https://travis-ci.com/stanfordnqp/spins-b
     
+.. image:: https://codecov.io/gh/stanfordnqp/spins-b/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/stanfordnqp/spins-b
+    
 SPINS-B
 =======
 
