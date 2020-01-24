@@ -10,7 +10,7 @@ SPINS-B
 SPINS-B is the open source version of `SPINS <http://techfinder.stanford.edu/technologies/S18-012_inverse-design-software-for>`_,
 a framework for gradient-based (adjoint) photonic optimization developed over
 the past decade at Jelena Vuckovic's `Nanoscale and Quantum Photonics Lab <http://nqp.stanford.edu>`_
-at Stanford University. For commercial use, the full version can be licensed
+at Stanford University. The full version can be licensed
 through the `Stanford Office of Technology and Licensing <http://techfinder.stanford.edu/technologies/S18-012_inverse-design-software-for>`_ (see FAQ).
 
 The overall architecture is explained in our paper `Nanophotonic Inverse Design with SPINS: Software Architecture and Practical Considerations <https://arxiv.org/abs/1910.04829>`_. 
@@ -113,7 +113,7 @@ use. It is a superset of SPINS-B and includes the ability to design devices
 without writing any code with user-friendly interfaces and to apply precise
 fabrication constraints (minimum gap and curvature constraints). All devices
 shown in our published work rely on capabilities found in the fully-featured
-SPINS.
+SPINS. Commercial and academic licenses are available.
 
 How are structures simulated?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
