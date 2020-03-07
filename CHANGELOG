@@ -21,3 +21,11 @@ We will try to document all notable changes in this file.
 ## 2019-10-16
 ### Changed
 - Grating example has more features: GDS generation, foreground/background GDS generated programmatically, minimize backreflection objective [@ludi1001]
+
+## 2020-03-06
+### Added
+- Allow using environment variable MAXWELL_SERVER to control Maxwell server location [@ludi1001]
+
+### Changed
+- Upgraded to gdspy 1.4+ [@ludi1001]
+- Correctly include loss from custom material loading [@ludi1001]

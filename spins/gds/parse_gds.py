@@ -71,9 +71,11 @@ class GDSImport:
         """
 
         layers = {}
-        for poly_set in self.top_level_cell.elements:
-            key = (poly_set.layers[0], poly_set.datatypes[0])
-            layers[key] = poly_set
+        for poly in self.top_level_cell.get_polygonsets():
+            key = (poly.layers[0], poly.datatypes[0])
+            if key not in layers:
+                layers[key] = []
+            layers[key] += poly.polygons
 
         return layers
 
@@ -108,7 +110,7 @@ class GDSImport:
                     num_polys = 0
                     cell.flatten()
 
-                    polygon_sets = cell.elements
+                    polygon_sets = cell.get_polygonsets()
                     for polygon_set in polygon_sets:
                         num_polys += len(polygon_set.polygons)
 
@@ -202,4 +204,4 @@ class GDSImport:
         """
         if layer not in self.layers:
             return []
-        return self.layers[layer].polygons
+        return self.layers[layer]

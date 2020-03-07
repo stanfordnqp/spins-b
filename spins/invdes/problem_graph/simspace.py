@@ -391,7 +391,8 @@ def _get_mat_index(index_element: optplan.Material,
         mat_obj = material.CustomMaterial(
             np.multiply(index_data["wl"].tolist(), NM_PER_UM),
             index_data["n"].tolist(), index_data["k"].tolist())
-        index = mat_obj.refractive_index(np.array(wlen))[0]
+        n, k = mat_obj.refractive_index(np.array(wlen))
+        index = n - 1j * k
     else:
         raise ValueError("No valid material.")
 
