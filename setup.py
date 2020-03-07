@@ -6,7 +6,7 @@ setuptools.setup(
     python_requires=">=3.5",
     install_requires=[
         "flatdict",
-        "gdspy==1.3.2",
+        "gdspy>=1.4",
         "h5py",
         "jsonschema",
         "matplotlib",

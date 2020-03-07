@@ -83,7 +83,7 @@ class MaxwellSolver:
 
     def __init__(self,
                  shape: np.ndarray,
-                 server='localhost:9041',
+                 server=os.getenv("MAXWELL_SERVER", "localhost:9041"),
                  err_thresh=DEFAULT_ERROR_THRESHOLD,
                  max_iters=DEFAULT_MAX_ITERS,
                  solver='CG'):
@@ -312,10 +312,10 @@ class MaxwellSolver:
                     (dummy, -np.flip(E[2][1:, :, :], 0), E[2]), axis=0)
             elif symmetry[0] == 2:
                 E[0] = np.concatenate((-np.flip(E[0], 0), E[0]), axis=0)
-                E[1] = np.concatenate(
-                    (dummy, np.flip(E[1][1:, :, :], 0), E[1]), axis=0)
-                E[2] = np.concatenate(
-                    (dummy, np.flip(E[2][1:, :, :], 0), E[2]), axis=0)
+                E[1] = np.concatenate((dummy, np.flip(E[1][1:, :, :], 0), E[1]),
+                                      axis=0)
+                E[2] = np.concatenate((dummy, np.flip(E[2][1:, :, :], 0), E[2]),
+                                      axis=0)
 
             dummy = np.expand_dims(np.zeros_like(E[1][:, 0, :]), 1)
             if symmetry[1] == 1:
@@ -325,11 +325,11 @@ class MaxwellSolver:
                 E[2] = np.concatenate(
                     (dummy, -np.flip(E[2][:, 1:, :], 1), E[2]), axis=1)
             elif symmetry[1] == 2:
-                E[0] = np.concatenate(
-                    (dummy, np.flip(E[0][:, 1:, :], 1), E[0]), axis=1)
+                E[0] = np.concatenate((dummy, np.flip(E[0][:, 1:, :], 1), E[0]),
+                                      axis=1)
                 E[1] = np.concatenate((-np.flip(E[1], 1), E[1]), axis=1)
-                E[2] = np.concatenate(
-                    (dummy, np.flip(E[2][:, 1:, :], 1), E[2]), axis=1)
+                E[2] = np.concatenate((dummy, np.flip(E[2][:, 1:, :], 1), E[2]),
+                                      axis=1)
 
             dummy = np.expand_dims(np.zeros_like(E[1][:, :, 0]), 2)
             if symmetry[2] == 1:
@@ -339,10 +339,10 @@ class MaxwellSolver:
                     (dummy, -np.flip(E[1][:, :, 1:], 2), E[1]), axis=2)
                 E[2] = np.concatenate((np.flip(E[2], 2), E[2]), axis=2)
             elif symmetry[2] == 2:
-                E[0] = np.concatenate(
-                    (dummy, np.flip(E[0][:, :, 1:], 2), E[0]), axis=2)
-                E[1] = np.concatenate(
-                    (dummy, np.flip(E[1][:, :, 1:], 2), E[1]), axis=2)
+                E[0] = np.concatenate((dummy, np.flip(E[0][:, :, 1:], 2), E[0]),
+                                      axis=2)
+                E[1] = np.concatenate((dummy, np.flip(E[1][:, :, 1:], 2), E[1]),
+                                      axis=2)
                 E[2] = np.concatenate((-np.flip(E[2], 2), E[2]), axis=2)
 
             return E
@@ -381,7 +381,6 @@ class MaxwellSolver:
         if adjoint:
             for i in range(3):
                 E[i] = np.multiply(E[i], np.conj(s[i]))
-
 
         # Remove downloaded files.
         if solver_info:
