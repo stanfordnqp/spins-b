@@ -10,6 +10,8 @@ Welcome to SPINS-B's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   introduction
+   examples
 
 
 Indices and tables
