@@ -182,7 +182,7 @@ class GDSImport:
         if layer not in self.layers:
             return []
 
-        for polygon in self.layers[layer].polygons:
+        for polygon in self.layers[layer]:
             boxes.append(self.get_bounding_box(polygon))
 
         return boxes
