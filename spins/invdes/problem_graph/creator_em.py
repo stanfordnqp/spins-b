@@ -153,6 +153,8 @@ class GaussianSource:
             work: Unused.
         """
         self._params = params
+        if self._params.beam_center is None:
+            self._params.beam_center = self._params.center
 
     def __call__(self, simspace: SimulationSpace, wlen: float,
                  solver: Callable, **kwargs) -> fdfd_tools.VecField:
@@ -181,7 +183,7 @@ class GaussianSource:
             psi=self._params.psi,
             polarization_angle=self._params.polarization_angle,
             w0=self._params.w0,
-            center=self._params.center,
+            center=self._params.beam_center,
             power=self._params.power)
 
         if self._params.normalize_by_sim:
