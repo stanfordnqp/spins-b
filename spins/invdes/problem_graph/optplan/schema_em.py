@@ -346,6 +346,7 @@ class GaussianSource(optplan.EmSource):
     type = schema_utils.polymorphic_model_type("source.gaussian_beam")
     w0 = types.FloatType()
     center = optplan.vec3d()
+    beam_center = optplan.vec3d()
     extents = optplan.vec3d()
     normal = optplan.vec3d()
     theta = types.FloatType()
