@@ -61,7 +61,7 @@ def run_opt(save_folder: str, grating_len: float, wg_width: float) -> None:
     obj, monitors = create_objective(
         sim_space, wg_thickness=wg_thickness, grating_len=grating_len)
     trans_list = create_transformations(
-        obj, monitors, 60, 200, sim_space, min_feature=100)
+        obj, monitors, 60, 200, sim_space, min_feature=80)
     plan = optplan.OptimizationPlan(transformations=trans_list)
 
     # Save the optimization plan so we have an exact record of all the
@@ -159,10 +159,6 @@ def create_sim_space(
 
     gdspy.write_gds(gds_fg_name, [gds_fg], unit=1e-9, precision=1e-9)
     gdspy.write_gds(gds_bg_name, [gds_bg], unit=1e-9, precision=1e-9)
-
-    if visualize:
-        gdspy.LayoutViewer(cells=[gds_fg])
-        gdspy.LayoutViewer(cells=[gds_bg])
 
     # The BOX layer/silicon device interface is set at `z = 0`.
     #
@@ -291,82 +287,93 @@ def create_objective(
     """
     # Keep track of metrics and fields that we want to monitor.
     monitor_list = []
+    objectives = []
+    
+    # Set wavelengths to optimize over
+    wlens = [1550]
+    
+    for wlen in wlens:
+        epsilon = optplan.Epsilon(
+            simulation_space=sim_space,
+            wavelength=wlen,
+        )
+        # Append to monitor list for each wavelength
+        monitor_list.append(optplan.FieldMonitor(name="mon_eps_"+str(wlen), function=epsilon))
 
-    wlen = 1550
-    epsilon = optplan.Epsilon(
-        simulation_space=sim_space,
-        wavelength=wlen,
-    )
-    monitor_list.append(optplan.FieldMonitor(name="mon_eps", function=epsilon))
-
-    # Add a Gaussian source that is angled at 10 degrees.
-    sim = optplan.FdfdSimulation(
-        source=optplan.GaussianSource(
-            polarization_angle=0,
-            theta=np.deg2rad(-10),
-            psi=np.pi / 2,
-            center=[0, 0, wg_thickness + 700],
-            extents=[14000, 14000, 0],
-            normal=[0, 0, -1],
-            power=1,
-            w0=5200,
-            normalize_by_sim=True,
-        ),
-        solver="local_direct",
-        wavelength=wlen,
-        simulation_space=sim_space,
-        epsilon=epsilon,
-    )
-    monitor_list.append(
-        optplan.FieldMonitor(
-            name="mon_field",
-            function=sim,
-            normal=[0, 1, 0],
-            center=[0, 0, 0],
-        ))
-
-    wg_overlap = optplan.WaveguideModeOverlap(
-        center=[-grating_len / 2 - 1000, 0, wg_thickness / 2],
-        extents=[0.0, 1500, 1500.0],
-        mode_num=0,
-        normal=[-1.0, 0.0, 0.0],
-        power=1.0,
-    )
-    power = optplan.abs(optplan.Overlap(simulation=sim, overlap=wg_overlap))**2
-    monitor_list.append(optplan.SimpleMonitor(name="mon_power", function=power))
-
-    if not MINIMIZE_BACKREFLECTION:
-        # Spins minimizes the objective function, so to make `power` maximized,
-        # we minimize `1 - power`.
-        obj = 1 - power
-    else:
-        # TODO: Use a Gaussian overlap to calculate power emitted by grating
-        # so we only need one simulation to handle backreflection and
-        # transmission.
-        refl_sim = optplan.FdfdSimulation(
-            source=optplan.WaveguideModeSource(
-                center=wg_overlap.center,
-                extents=wg_overlap.extents,
-                mode_num=0,
-                normal=[1, 0, 0],
-                power=1.0,
+        # Add a Gaussian source that is angled at 10 degrees.
+        sim = optplan.FdfdSimulation(
+            source=optplan.GaussianSource(
+                polarization_angle=0,
+                theta=np.deg2rad(-10),
+                psi=np.pi / 2,
+                center=[0, 0, wg_thickness + 700],
+                extents=[14000, 14000, 0],
+                normal=[0, 0, -1],
+                power=1,
+                w0=5200,
+                normalize_by_sim=True,
             ),
             solver="local_direct",
             wavelength=wlen,
             simulation_space=sim_space,
             epsilon=epsilon,
         )
-        refl_power = optplan.abs(
-            optplan.Overlap(simulation=refl_sim, overlap=wg_overlap))**2
         monitor_list.append(
-            optplan.SimpleMonitor(name="mon_refl_power", function=refl_power))
+            optplan.FieldMonitor(
+                name="mon_field_"+str(wlen),
+                function=sim,
+                normal=[0, 1, 0],
+                center=[0, 0, 0],
+            ))
 
-        # We now have two sub-objectives: Maximize transmission and minimize
-        # back-reflection, so we must an objective that defines the appropriate
-        # tradeoff between transmission and back-reflection. Here, we choose the
-        # simplest objective to do this, but you can use SPINS functions to
-        # design more elaborate objectives.
-        obj = (1 - power) + 4 * refl_power
+        wg_overlap = optplan.WaveguideModeOverlap(
+            center=[-grating_len / 2 - 1000, 0, wg_thickness / 2],
+            extents=[0.0, 1500, 1500.0],
+            mode_num=0,
+            normal=[-1.0, 0.0, 0.0],
+            power=1.0,
+        )
+        power = optplan.abs(optplan.Overlap(simulation=sim, overlap=wg_overlap))**2
+        monitor_list.append(optplan.SimpleMonitor(name="mon_power_"+str(wlen), function=power))
+
+        if not MINIMIZE_BACKREFLECTION:
+            # Spins minimizes the objective function, so to make `power` maximized,
+            # we minimize `1 - power`.
+            obj = 1 - power
+        else:
+            # TODO: Use a Gaussian overlap to calculate power emitted by grating
+            # so we only need one simulation to handle backreflection and
+            # transmission.
+            refl_sim = optplan.FdfdSimulation(
+                source=optplan.WaveguideModeSource(
+                    center=wg_overlap.center,
+                    extents=wg_overlap.extents,
+                    mode_num=0,
+                    normal=[1, 0, 0],
+                    power=1.0,
+                ),
+                solver="local_direct",
+                wavelength=wlen,
+                simulation_space=sim_space,
+                epsilon=epsilon,
+            )
+            refl_power = optplan.abs(
+                optplan.Overlap(simulation=refl_sim, overlap=wg_overlap))**2
+            monitor_list.append(
+                optplan.SimpleMonitor(name="mon_refl_power_"+str(wlen), function=refl_power))
+    
+            # We now have two sub-objectives: Maximize transmission and minimize
+            # back-reflection, so we must an objective that defines the appropriate
+            # tradeoff between transmission and back-reflection. Here, we choose the
+            # simplest objective to do this, but you can use SPINS functions to
+            # design more elaborate objectives.
+            obj = (1 - power) + 4 * refl_power
+
+        objectives.append(obj)
+
+
+    obj = sum(objectives)
+
 
     return obj, monitor_list
 
