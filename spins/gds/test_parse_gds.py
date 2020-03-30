@@ -14,8 +14,13 @@ def test_load_gds():
     polygons = gds_file.get_polygons((100, 0))
 
     assert len(polygons) == 1
-    np.testing.assert_almost_equal(
-        polygons[0], [[-1, 0.7], [-5, 0.7], [-5, 0.2], [-1, 0.2]])
+    np.testing.assert_almost_equal(polygons[0],
+                                   [[-1, 0.7], [-5, 0.7], [-5, 0.2], [-1, 0.2]])
+
+    boxes = gds_file.get_bounding_boxes((100, 0))
+    assert len(boxes) == 1
+    np.testing.assert_almost_equal(polygons[0],
+                                   [[-1, 0.7], [-5, 0.7], [-5, 0.2], [-1, 0.2]])
 
 
 def test_load_gds_diff_units():
@@ -32,31 +37,34 @@ def test_load_gds_diff_units():
 
     assert len(polygons) == 1
     np.testing.assert_almost_equal(
-        polygons[0],
-        [[-1000, 700], [-5000, 700], [-5000, 200], [-1000, 200]])
+        polygons[0], [[-1000, 700], [-5000, 700], [-5000, 200], [-1000, 200]])
+
 
 def test_standard_load():
     with open(os.path.join(TESTDATA, "tlc_test_gds1.gds"), "rb") as fp:
         gds_file = gds.GDSImport(fp)
     assert gds_file.top_level_cell.name == "CELL1"
 
+
 def test_named_cell_load():
     with open(os.path.join(TESTDATA, "tlc_test_gds1.gds"), "rb") as fp:
         gds_file = gds.GDSImport(fp, "CELL2")
     assert gds_file.top_level_cell.name == "CELL2"
+
 
 def test_name_not_found():
     with pytest.raises(ValueError, match="name not found"):
         with open(os.path.join(TESTDATA, "tlc_test_gds1.gds"), "rb") as fp:
             gds_file = gds.GDSImport(fp, "CELL3")
 
+
 def test_same_num_polygons_load():
     with pytest.raises(ValueError, match="same number"):
         with open(os.path.join(TESTDATA, "tlc_test_gds2.gds"), "rb") as fp:
             gds_file = gds.GDSImport(fp)
 
+
 def test_no_valid_cell():
     with pytest.raises(ValueError, match="valid cell"):
         with open(os.path.join(TESTDATA, "tlc_test_gds3.gds"), "rb") as fp:
             gds_file = gds.GDSImport(fp)
- 

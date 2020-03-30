@@ -29,3 +29,8 @@ We will try to document all notable changes in this file.
 ### Changed
 - Upgraded to gdspy 1.4+ [@ludi1001]
 - Correctly include loss from custom material loading [@ludi1001]
+
+## 2020-03-29
+### Changed
+- Allow Gaussian beam source center to be defined outside of simulation region [@jskarda]
+- Make grating coupler example broadband [@nvsapra]
