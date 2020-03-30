@@ -7,7 +7,7 @@ import os
 import pickle
 from typing import Dict, List, Optional, Tuple
 
-import spins
+import spins.gds
 from spins.invdes.problem_graph import creator
 from spins.invdes.problem_graph import optplan
 from spins.invdes.problem_graph import workspace
