@@ -27,6 +27,15 @@ Features
 - Support for custom objective functions, sources, and optimization methods
 - Automatically save design methodology and all hyperparameters used in optimization for reproducibility
 
+Upcoming Features
+-----------------
+We are protoyping the next version of SPINS, known as Goos. This
+version of SPINS will support these new features:
+
+- Co-optimization of multiple device regions simulataneously
+- Integration with FDTD and other electromagnetic solvers
+- Easier to use and extend
+
 Overview
 --------
 Traditional nanophotonic design typically relies on parameter sweeps, which are

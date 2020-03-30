@@ -1,5 +1,5 @@
-SPINS-B
-=======
+Introduction
+============
 
 SPINS-B is the open source version of `SPINS <http://techfinder.stanford.edu/technologies/S18-012_inverse-design-software-for>`_,
 a framework for gradient-based (adjoint) photonic optimization developed over
@@ -16,6 +16,17 @@ Features
 - 2D and 3D device optimization using finite-difference frequency-domain (FDFD)
 - Support for custom objective functions, sources, and optimization methods
 - Automatically save design methodology and all hyperparameters used in optimization for reproducibility
+
+
+Upcoming Features
+-----------------
+We are protoyping the next version of SPINS, known as :doc:`goos/index`. This
+version of SPINS will support these new features:
+
+- Integration with FDTD solvers
+- Co-optimization of multiple device regions simulataneously
+- Easier to use and extend
+
 
 Overview
 --------

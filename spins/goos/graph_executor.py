@@ -1,0 +1,516 @@
+"""This module contains functions to evaluate the computational graph.
+
+The two public functions exported by this module are `eval_fun` to evaluate
+a function given a parametrization and `eval_grad` to evaluate the gradient
+of a function with respect to a parametrization.
+
+Both these functions allow having "old-style" forward autodiff functions
+(the ones that do not define `eval` and `grad`) in the computational graph
+by falling back on `calculate_objective_function` and `calculate_gradient`
+as necessary. Note that there is likely a loss of efficiency when this happens.
+
+Together, these functions implement reverse-mode autodiff. A computational
+graph is built up using the listed dependencies in `goos.Function`
+(the `_goos_inputs` field). The nodes are processed in an order determined by a
+topological sort (a topological sort produces a sequential ordering of the nodes
+such that if node A comes before node B, then computing node's A value does not
+depend on knowing node B's value). If there is more than one valid
+opological ordering of the graph nodes, the topological sort algorithm used
+here groups together nodes that have been marked as `heavy_compute`, i.e.
+require substantial computation. A block of these "heavy nodes" are
+executed in parallel rather than processed serially.
+"""
+from typing import Dict, List, Set, Tuple, Union
+
+import collections
+import concurrent.futures
+import inspect
+
+import numpy as np
+
+from spins import goos
+from spins.goos import flows
+
+# Alias common types.
+# Represents the ID of a single node. Currently, the id of a node is determined
+# by the `id` function. Hence, it is integral.
+NodeId = int
+FunctionMap = Dict[NodeId, "goos.Function"]
+# Defines the adjacency list form of a graph.
+Graph = Dict[NodeId, List[NodeId]]
+
+
+def eval_fun(
+    fun_list: Union[List["goos.Function"], "goos.Function"],
+    override_map: Dict["goos.Function", Tuple["flows.Flow",
+                                              "goos.NodeFlags"]] = None
+) -> Union[List["flows.Flow"], "flows.Flow"]:
+    """Evaluates `fun` with parametrization `param`.
+
+    This function evaluates `fun_list` by building up a computational graph and
+    serially processes nodes that are quick to compute and parallely processes
+    nodes that are computationally demanding.
+
+    This function assumes that `param.get_structure()` will replace up to one
+    `Variable` in the computational graph. If no `Variable` nodes exist, the
+    value will not be used. If multiple `Variable` nodes exist, a `ValueError`
+    is raised.
+
+    Args:
+        fun_list: List of functions to evaluate or a single function.
+        override_map: Map of precomputed values for function evaluation. Each
+            entry is a tuple `(fun_val, context)` where `fun_val` is the value
+            of the function and `context` is the evaluation context. The node
+            will not be evaluated and instead the value in the `override_map`
+            will be used in instead.
+
+    Returns:
+        List of function values for each function in `fun_list` if `fun_list`
+        is an iterable. Otherwise, returns the value of the single function.
+
+    Raises:
+        ValueError: If more than one `Variable` node was found.
+    """
+    if isinstance(fun_list, goos.ProblemGraphNode):
+        fun_list = [fun_list]
+        single_output = True
+    else:
+        single_output = False
+
+    fun_map, graph, in_nodes, out_nodes, heavy_nodes = _create_computational_graph(
+        fun_list)
+
+    # Run computation based on topological sort.
+    top_sorted_nodes = _top_sort_affinity(graph, heavy_nodes)
+
+    # Initialize any known function values. For now this is the structure,
+    # but in the future this could include other variables and cached values.
+    fun_vals = {}
+    fun_flags = {}
+    if override_map:
+        for fun, (flow, context) in override_map.items():
+            fun_vals[id(fun)] = flow
+            fun_flags[id(fun)] = context
+
+    _eval_fun_vals(fun_vals, fun_flags, fun_map, graph, top_sorted_nodes)
+
+    ret_vals = [fun_vals[out_node] for out_node in out_nodes]
+    if single_output:
+        return ret_vals[0]
+    return ret_vals
+
+
+def _eval_fun_vals(
+        fun_vals: Dict[NodeId, np.ndarray],
+        fun_flags: Dict[NodeId, goos.NodeFlags],
+        fun_map: FunctionMap,
+        graph: Graph,
+        top_sorted_nodes: List[NodeId],
+) -> None:
+    """Computes the function value at every point in the graph.
+
+    This function traverses the graph in order of `top_sorted_nodes` and
+    compute the values. These values are stored in `fun_vals` (note that this
+    dictionary is modified in the process!). A block of heavy nodes will be
+    executed in parallel.
+
+    Args:
+        fun_vals: Stores the values of each node. This map can be partially
+            filled when `_eval_fun_vals` is called. In this case,
+            `_eval_fun_vals` will skip the function evaluation.
+        fun_context: Stores the eval context for each node.
+        fun_map: Function map generated by `_create_computational_graph`.
+        graph: Computational graph generated by `_create_computational_graph`.
+        top_sorted_nodes: Topologically sorted node order of the graph. Note
+            that this should be for the computational graph as built by
+            `_create_computational_graph`, which by nature of starting from the
+            output function, has edges point from outputs to inputs. This is
+            thus the reverse order that `_eval_fun_vals` uses to process nodes.
+    """
+
+    def _eval_fun(node, input_vals, context):
+        # Check whether `eval` takes a context as an argument.
+        if len(inspect.signature(node.eval).parameters) == 1:
+            return node.eval(input_vals)
+        else:
+            return node.eval(input_vals, context)
+
+    def _eval_flags(node, input_flags, fun_out):
+        if hasattr(node, "eval_const_flags"):
+            # Defer to the node if it implements const flag evaluation.
+            const_flags = node.eval_const_flags(
+                [con.const_flags for con in input_flags])
+            frozen_flags = node.eval_const_flags(
+                [con.frozen_flags for con in input_flags])
+        else:
+            # If all the inputs are const, then this node must have const output.
+            # If not, assume otherwise.
+            const_flags = type(fun_out).ConstFlags()
+            frozen_flags = type(fun_out).ConstFlags()
+            const_flags.set_all(all(con.const_flags for con in input_flags))
+            frozen_flags.set_all(all(con.frozen_flags for con in input_flags))
+        return goos.NodeFlags(const_flags=const_flags,
+                              frozen_flags=frozen_flags)
+
+    def _eval_fun_and_flags(node, input_vals, input_flags):
+        fun = _eval_fun(fun_map[node], input_vals,
+                        goos.EvalContext(input_flags))
+        flags = _eval_flags(fun_map[node], input_flags, fun)
+        return fun, flags
+
+    # Use iterators to avoid carrying out any extra index.
+    # Note that Python iterators do not have a `has_next` ability so they
+    # throw a `StopIteration` exception when the iterator reaches the end of the
+    # list.
+    try:
+        node_iter = iter(reversed(top_sorted_nodes))
+        node = next(node_iter)
+        while True:
+            while True:
+                # Skip any nodes that already set. This happens if the initial
+                # function values were set by the caller.
+                if node in fun_vals:
+                    node = next(node_iter)
+                    continue
+
+                # Check if we've reached a section of heavy computation nodes.
+                if _is_heavy_fun(fun_map[node]):
+                    break
+
+                # Compute the function value.
+                input_vals = [fun_vals[in_node] for in_node in graph[node]]
+                input_flags = [fun_flags[in_node] for in_node in graph[node]]
+                fun_vals[node], fun_flags[node] = _eval_fun_and_flags(
+                    node, input_vals, input_flags)
+
+                node = next(node_iter)
+
+            # Figure out block of heavy compute nodes.
+            heavy_node_block = []
+            # Keep track of whether we reached the last node in the graph.
+            # This is necessary because if the last node happens to be a heavy
+            # compute node, then `next` would throw a `StopIteration` that
+            # would be silently ignored.
+            last_node_reached = False
+            try:
+                while _is_heavy_fun(fun_map[node]):
+                    heavy_node_block.append(node)
+                    node = next(node_iter)
+            except StopIteration:
+                last_node_reached = True
+
+            # TODO(logansu): Deal with heavy node eval contexts.
+            # Parallelize heavy compute.
+            arg_list = []
+            for node_ in heavy_node_block:
+                arg_list.append(
+                    (node_, [fun_vals[in_node] for in_node in graph[node_]],
+                     [fun_flags[in_node] for in_node in graph[node_]]))
+
+            with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=len(arg_list)) as executor:
+                heavy_node_vals = executor.map(
+                    lambda args: _eval_fun_and_flags(*args), arg_list)
+
+            # Store the results of the parallel computation.
+            for node_, node_val in zip(heavy_node_block, heavy_node_vals):
+                fun_vals[node_], fun_flags[node_] = node_val
+
+            if last_node_reached:
+                break
+
+    except StopIteration:
+        pass
+
+
+def eval_grad(
+    fun: "goos.Function",
+    variables: List["goos.Variable"],
+    override_map: Dict["goos.Function", Tuple["flows.Flow", "flows.Flow",
+                                              "goos.NodeFlags"]] = None
+) -> Union[List["flows.Flow"], "flows.Flow"]:
+    """Evalutes the gradient of `fun` with respect to `param`.
+
+    This function evaluates the gradient by reverse-mode autodiff using similar
+    technique described in `eval_fun`. Reverse-mode autodiff occurs in two
+    phases. In the first "forward" phase, all the values of the functions
+    at each node are computed. In the "backward" phase, the gradients are
+    computed starting from the output function moving towards the inputs.
+
+    This function assumes that `param.get_structure()` will replace up to one
+    `Variable` in the computational graph. If no `Variable` nodes exist, the
+    value will not be used. If multiple `Variable` nodes exist, a `ValueError`
+    is raised.
+
+    Args:
+        fun: The function to evaluate.
+        variables: List of nodes with respect to which the gradient should
+            be evaluated.
+        override_map: Map of precomputed values to use during gradient
+            evaluation. Each entry is a tuple `(fun_val, grad_val, context)`
+            where `fun_val` is the value of the node, `grad_val` is the
+            value of the gradient with respect to the node, and `context` is the
+            context of the node.
+
+    Returns:
+        The function value.
+
+    Raises:
+        ValueError: If more than one `Variable` node was found.
+    """
+    fun_map, graph, in_nodes, out_nodes, heavy_nodes = _create_computational_graph(
+        [fun])
+    out_node = out_nodes[0]
+
+    # Forward pass (phase 1): Compute function values. This is a near identical
+    # behavior to `eval_fun`.
+
+    # Dictionary mapping function ids to values.
+    fun_vals = {}
+    fun_flags = {}
+    if override_map:
+        for fun, flow in override_map.items():
+            fun_vals[id(fun)] = flow[0]
+            fun_flags[id(fun)] = flow[2]
+
+    top_sorted_nodes = _top_sort_affinity(graph, heavy_nodes)
+    _eval_fun_vals(fun_vals, fun_flags, fun_map, graph, top_sorted_nodes)
+
+    # Backward pass (phase 2): The gradients are computed moving from
+    # the last node to the first.
+
+    # Dictionary mapping function ids to gradients.
+    grad_vals = {}
+    known_grads = {}
+    if override_map:
+        for fun, flow in override_map.items():
+            known_grads[id(fun)] = [flow[1]]
+    grad_vals[out_node] = flows.NumericFlow.Grad(np.array([1.0]))
+
+    def _eval_grad(node, input_vals, grad_val, context):
+        context = goos.EvalContext(context)
+        if node in known_grads:
+            return known_grads[node]
+        # Check whether `grad` accepts a context parameter.
+        if len(inspect.signature(fun_map[node].grad).parameters) == 2:
+            return fun_map[node].grad(input_vals, grad_val)
+        else:
+            return fun_map[node].grad(input_vals, grad_val, context)
+
+    def _update_grad_vals(node, node_grad_vals):
+        # If the gradient is `None`, we automatically create an
+        # empty gradient structure.
+        for i in range(len(node_grad_vals)):
+            if node_grad_vals[i] is None:
+                node_grad_vals[i] = type(input_vals[i]).Grad()
+
+        # Update the gradient values.
+        for next_node, next_fun_grad in zip(graph[node], node_grad_vals):
+            if next_node in grad_vals:
+                grad_vals[next_node] += next_fun_grad
+            else:
+                grad_vals[next_node] = next_fun_grad
+
+    try:
+        node_iter = iter(top_sorted_nodes)
+        node = next(node_iter)
+
+        while True:
+            while True:
+                # Postpone any heavy computation.
+                if _is_heavy_fun(fun_map[node]):
+                    break
+
+                # Get the gradients of the output function with respect to
+                # the inputs of function `node`.
+                input_vals = [fun_vals[next_node] for next_node in graph[node]]
+                input_flags = [fun_flags[in_node] for in_node in graph[node]]
+                node_grad_vals = _eval_grad(node, input_vals, grad_vals[node],
+                                            input_flags)
+                _update_grad_vals(node, node_grad_vals)
+
+                node = next(node_iter)
+
+            # At this point, we have processed all the possible nodes.
+            # We now parallelize the computation of the `heavy_compute_nodes`.
+            heavy_node_block = []
+            last_node_reached = False
+            try:
+                while _is_heavy_fun(fun_map[node]):
+                    heavy_node_block.append(node)
+                    node = next(node_iter)
+            except StopIteration:
+                last_node_reached = True
+
+            # Parallelize heavy compute.
+            arg_list = []
+            for node_ in heavy_node_block:
+                arg_list.append((
+                    node_,
+                    [fun_vals[in_node] for in_node in graph[node_]],
+                    grad_vals[node_],
+                    [fun_flags[in_node] for in_node in graph[node_]],
+                ))
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                heavy_node_vals = executor.map(lambda args: _eval_grad(*args),
+                                               arg_list)
+
+            for node_, node_grad_vals in zip(heavy_node_block, heavy_node_vals):
+                _update_grad_vals(node_, node_grad_vals)
+
+            if last_node_reached:
+                break
+
+    except StopIteration:
+        pass
+
+    # Return the computed gradient for the variable or zero if it has not been
+    # computed (meaning the variable does not affect the objective).
+    grad_ret = []
+    for variable in variables:
+        if id(variable) in grad_vals:
+            grad_ret.append(grad_vals[id(variable)])
+        else:
+            flow = override_map[variable][0]
+            grad_ret.append(
+                type(flow).Grad(array_grad=np.zeros_like(flow.array)))
+    return grad_ret
+
+
+def _create_computational_graph(
+    fun_list: List["goos.Function"]
+) -> Tuple[FunctionMap, Graph, Set[NodeId], NodeId]:
+    """Constructs the computational graph.
+
+    This function constructs the graph of operations needed to calculate
+    the value of `fun` all the way to the parametrization.
+
+    Args:
+        fun_list: The output functions of the computational graph.
+
+    Returns:
+        A tuple `(fun_map, graph, in_nodes, out_node, heavy_nodes)` where
+        `fun_map` maps unique integers to optimization functions, `graph` is
+        the adjacency list form of the computation graph where edges point from
+        outputs to inputs, `in_nodes` is a list of `Variable` nodes,
+        `out_node` is the ID of `fun`, and `heavy_nodes` is a list of nodes
+        that have been marked as heavy compute.
+        of the computational graph.
+    """
+    # To identify functions, we use `id`, which is guaranteed to be unique for
+    # two different objects (for CPython, this is simply the memory address).
+    out_nodes = [id(fun) for fun in fun_list]
+    fun_map = {node: fun for node, fun in zip(out_nodes, fun_list)}
+
+    # Set of functions that do not have inputs.
+    in_nodes = set()
+
+    heavy_nodes = set()
+
+    graph = {}
+
+    # Run breadth-first search to find all the relevant graph nodes.
+    qu = collections.deque()
+    for node in out_nodes:
+        qu.append(node)
+
+    while qu:
+        node = qu.popleft()
+
+        # Initialize adjacency list.
+        graph[node] = []
+
+        if _is_heavy_fun(fun_map[node]):
+            heavy_nodes.add(node)
+
+        if isinstance(fun_map[node], goos.Variable):
+            in_nodes.add(node)
+
+        for next_fun in fun_map[node]._goos_inputs:  # pylint: disable=protected-access
+            next_fun_id = id(next_fun)
+
+            graph[node].append(next_fun_id)
+
+            if next_fun_id in fun_map.keys():
+                continue
+
+            fun_map[next_fun_id] = next_fun
+            qu.append(next_fun_id)
+
+    return fun_map, graph, in_nodes, out_nodes, heavy_nodes
+
+
+def _top_sort_affinity(graph: Graph,
+                       affinity_nodes: List[NodeId]) -> List[NodeId]:
+    """Computes a topological sort of the graph.
+
+    A topological sort is an order of nodes in the graph such that if node A
+    precedes node B in the sorted order, then there does not exist a path from
+    node B to node A. For example, if the directed edges represent
+    task dependencies, then A precedes B iff A can be performed without
+    performing B first.
+
+    This topological sort chooses between topologically orderings by placing
+    affinity nodes as continguously as possible. This is used to group together
+    nodes that are computationally difficult. In other words, this is
+    topological sorting algorithm that breaks "ties" by picking orderings
+    where there are fewest continugous blocks of affinity nodes as possible.
+
+    Args:
+        graph: Adjacency list form of a direct acyclic graph.
+        affinity_nodes: A list of nodes that should be placed together in a
+            topological sort if possible.
+
+    Returns:
+        A topological ordering of the nodes of the graph.
+    """
+    # Dictionary mapping function ids to the number of parents that still
+    # need to be processed.
+    parents = {node: 0 for node in graph.keys()}
+
+    for node, node_list in graph.items():
+        for child in node_list:
+            parents[child] += 1
+
+    qu = collections.deque()
+
+    # Enqueue all nodes without any parents.
+    for node in graph.keys():
+        if parents[node] == 0:
+            qu.append(node)
+
+    # List of topologically sorted nodes.
+    top_sort_nodes = []
+
+    while qu:
+        # Keep track a block of affinity nodes.
+        affinity_nodes_block = set()
+
+        while qu:
+            node = qu.popleft()
+
+            if node in affinity_nodes:
+                affinity_nodes_block.add(node)
+                continue
+
+            top_sort_nodes.append(node)
+
+            # Update `parents` and check if any more nodes can be processed.
+            for next_node in graph[node]:
+                parents[next_node] -= 1
+                if parents[next_node] == 0:
+                    qu.append(next_node)
+
+        top_sort_nodes += list(affinity_nodes_block)
+
+        for node in affinity_nodes_block:
+            for next_node in graph[node]:
+                parents[next_node] -= 1
+                if parents[next_node] == 0:
+                    qu.append(next_node)
+
+    return top_sort_nodes
+
+
+def _is_heavy_fun(node):
+    return node._goos_heavy
