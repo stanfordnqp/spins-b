@@ -126,7 +126,7 @@ def main(save_folder: str, visualize: bool = False) -> None:
             obj,
             "L-BFGS-B",
             monitor_list=[sim["eps"], sim["field"], sim["overlap"], obj],
-            max_iters=100,
+            max_iters=60,
             name="opt_cont")
 
         # Prevent optimization from optimizing over continuous variable.
