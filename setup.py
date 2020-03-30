@@ -6,10 +6,14 @@ if sys.version_info < (3, 7):
     # Use `dataclasses` package as a backport for Python 3.6.
     extra_install_requires += ["dataclasses"]
 
+# Install Goos packages if using Python 3.6+.
+if sys.version_info >= (3, 6):
+    extra_install_requies += ["typing-inspect"]
+
 setuptools.setup(
     name="spins",
     version="0.2.0",
-    python_requires=">=3.6",
+    python_requires=">=3.5",
     install_requires=[
         "contours[shapely]",
         "dill",
@@ -24,7 +28,6 @@ setuptools.setup(
         "requests",
         "schematics",
         "scipy",
-        "typing-inspect",
     ] + extra_install_requires,
     extras_require={
         "test": [
