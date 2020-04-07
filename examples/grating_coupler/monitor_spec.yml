@@ -8,6 +8,22 @@ monitor_list:
   vector_operation: z
   scalar_operation: magnitude
 
+- monitor_names: [mon_power_1540]
+  monitor_type: scalar
+  scalar_operation: magnitude
+
+- monitor_names: [mon_power_1545]
+  monitor_type: scalar
+  scalar_operation: magnitude
+
 - monitor_names: [mon_power_1550]
+  monitor_type: scalar
+  scalar_operation: magnitude
+
+- monitor_names: [mon_power_1555]
+  monitor_type: scalar
+  scalar_operation: magnitude
+
+- monitor_names: [mon_power_1560]
   monitor_type: scalar
   scalar_operation: magnitude

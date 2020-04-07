@@ -137,6 +137,29 @@ def create_cubic_or_hermite_levelset(
         periodicity=periodicity,
         periods=periods)
 
+class DiscretePenaltyFun(problem.OptimizationFunction):
+    """
+    Discrteness penalty function.
+    This optimization function is for a term to the objective function of the form
+    z*(1-z) where z is a parameterization vector ranging from 0 to 1.
+    The role of this term is to bias intermediate values of the parameterization
+    towards discrete values 0 or 1.
+    """
+    def __init__(self, fun: problem.OptimizationFunction)-> None:
+        super().__init__(fun)
+
+    def eval(self, inputs: List[np.ndarray]) -> float:
+        return np.sum(inputs[0] * (1 - inputs[0]))
+
+    def grad(self, inputs: List[np.ndarray], grad_val: np.ndarray) -> List[np.ndarray]:
+        penalty = 1 - 2 * inputs[0]
+        return [grad_val * penalty]
+
+@optplan.register_node(optplan.DiscretePenalty)
+def create_discrete_penalty(param: optplan.DiscretePenalty, work: workspace.Workspace) -> DiscretePenaltyFun:
+    return DiscretePenaltyFun(
+            fun=work.get_object(workspace.VARIABLE_NODE))
+
 
 class FabricationPenalty(problem.OptimizationFunction):
     """
