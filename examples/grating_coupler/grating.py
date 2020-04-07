@@ -36,6 +36,11 @@ from spins.invdes.problem_graph import workspace
 
 # If `True`, also minimize the back-reflection.
 MINIMIZE_BACKREFLECTION = False
+# If 'True`, runs an additional `cont_iters' of continuous optimization with
+# discreteness permittivity biasing penalty added.
+# Fine-tuning the `intial_value' of `disc_scaling may be necessary depending
+# on application and the number of wavelengths optimized.
+DISCRETENESS_PENALTY = True
 
 
 def run_opt(save_folder: str, grating_len: float, wg_width: float) -> None:
@@ -50,18 +55,22 @@ def run_opt(save_folder: str, grating_len: float, wg_width: float) -> None:
 
     wg_thickness = 220
 
-    sim_space = create_sim_space(
-        "sim_fg.gds",
-        "sim_bg.gds",
-        grating_len=grating_len,
-        box_thickness=2000,
-        wg_thickness=wg_thickness,
-        etch_frac=0.5,
-        wg_width=wg_width)
-    obj, monitors = create_objective(
-        sim_space, wg_thickness=wg_thickness, grating_len=grating_len)
-    trans_list = create_transformations(
-        obj, monitors, 60, 200, sim_space, min_feature=80)
+    sim_space = create_sim_space("sim_fg.gds",
+                                 "sim_bg.gds",
+                                 grating_len=grating_len,
+                                 box_thickness=2000,
+                                 wg_thickness=wg_thickness,
+                                 etch_frac=0.5,
+                                 wg_width=wg_width)
+    obj, monitors = create_objective(sim_space,
+                                     wg_thickness=wg_thickness,
+                                     grating_len=grating_len)
+    trans_list = create_transformations(obj,
+                                        monitors,
+                                        50,
+                                        200,
+                                        sim_space,
+                                        min_feature=80)
     plan = optplan.OptimizationPlan(transformations=trans_list)
 
     # Save the optimization plan so we have an exact record of all the
@@ -163,7 +172,6 @@ def create_sim_space(
     if visualize:
         gdspy.LayoutViewer(cells=[gds_fg])
         gdspy.LayoutViewer(cells=[gds_bg])
-
 
     # The BOX layer/silicon device interface is set at `z = 0`.
     #
@@ -293,17 +301,18 @@ def create_objective(
     # Keep track of metrics and fields that we want to monitor.
     monitor_list = []
     objectives = []
-    
+
     # Set wavelengths to optimize over
-    wlens = [1550]
-    
+    wlens = [1540,1545,1550,1555,1560]
+
     for wlen in wlens:
         epsilon = optplan.Epsilon(
             simulation_space=sim_space,
             wavelength=wlen,
         )
         # Append to monitor list for each wavelength
-        monitor_list.append(optplan.FieldMonitor(name="mon_eps_"+str(wlen), function=epsilon))
+        monitor_list.append(
+            optplan.FieldMonitor(name="mon_eps_" + str(wlen), function=epsilon))
 
         # Add a Gaussian source that is angled at 10 degrees.
         sim = optplan.FdfdSimulation(
@@ -325,7 +334,7 @@ def create_objective(
         )
         monitor_list.append(
             optplan.FieldMonitor(
-                name="mon_field_"+str(wlen),
+                name="mon_field_" + str(wlen),
                 function=sim,
                 normal=[0, 1, 0],
                 center=[0, 0, 0],
@@ -338,8 +347,11 @@ def create_objective(
             normal=[-1.0, 0.0, 0.0],
             power=1.0,
         )
-        power = optplan.abs(optplan.Overlap(simulation=sim, overlap=wg_overlap))**2
-        monitor_list.append(optplan.SimpleMonitor(name="mon_power_"+str(wlen), function=power))
+        power = optplan.abs(optplan.Overlap(simulation=sim,
+                                            overlap=wg_overlap))**2
+        monitor_list.append(
+            optplan.SimpleMonitor(name="mon_power_" + str(wlen),
+                                  function=power))
 
         if not MINIMIZE_BACKREFLECTION:
             # Spins minimizes the objective function, so to make `power` maximized,
@@ -365,8 +377,9 @@ def create_objective(
             refl_power = optplan.abs(
                 optplan.Overlap(simulation=refl_sim, overlap=wg_overlap))**2
             monitor_list.append(
-                optplan.SimpleMonitor(name="mon_refl_power_"+str(wlen), function=refl_power))
-    
+                optplan.SimpleMonitor(name="mon_refl_power_" + str(wlen),
+                                      function=refl_power))
+
             # We now have two sub-objectives: Maximize transmission and minimize
             # back-reflection, so we must an objective that defines the appropriate
             # tradeoff between transmission and back-reflection. Here, we choose the
@@ -376,9 +389,7 @@ def create_objective(
 
         objectives.append(obj)
 
-
     obj = sum(objectives)
-
 
     return obj, monitor_list
 
@@ -440,12 +451,54 @@ def create_transformations(
             ),
         ))
 
+    # If true, do another round of continous optimization with a discreteness bias.
+    if DISCRETENESS_PENALTY:
+        # Define parameters necessary to normaize discrete penalty term
+        obj_val_param = optplan.Parameter(name="param_obj_final_val",
+                                          initial_value=1.0)
+        obj_val_param_abs = optplan.abs(obj_val_param)
+
+        discrete_penalty_val = optplan.Parameter(
+            name="param_discrete_penalty_val", initial_value=1.0)
+        discrete_penalty_val_abs = optplan.abs(discrete_penalty_val)
+
+        # Initial value of scaling is arbitrary and set for specific problem
+        disc_scaling = optplan.Parameter(name="discrete_scaling",
+                                         initial_value=5)
+
+        normalization = disc_scaling * obj_val_param_abs / discrete_penalty_val_abs
+
+        obj_disc = obj + optplan.DiscretePenalty() * normalization
+
+        trans_list.append(
+            optplan.Transformation(
+                name="opt_cont_disc",
+                parameter_list=[
+                    optplan.SetParam(parameter=obj_val_param,
+                                     function=obj,
+                                     parametrization=cont_param),
+                    optplan.SetParam(parameter=discrete_penalty_val,
+                                     function=optplan.DiscretePenalty(),
+                                     parametrization=cont_param)
+                ],
+                parametrization=cont_param,
+                transformation=optplan.ScipyOptimizerTransformation(
+                    optimizer="L-BFGS-B",
+                    objective=obj_disc,
+                monitor_lists=optplan.ScipyOptimizerMonitorList(
+                    callback_monitors=monitors,
+                    start_monitors=monitors,
+                    end_monitors=monitors),
+                optimization_options=optplan.ScipyOptimizerOptions(
+                    maxiter=cont_iters),
+                )))
+
     # Discretize. Note we add a little bit of wiggle room by discretizing with
     # a slightly larger feature size that what our target is (by factor of
     # `cont_to_disc_factor`). This is to give the optimization a bit more wiggle
     # room later on.
-    disc_param = optplan.GratingParametrization(
-        simulation_space=sim_space, inverted=True)
+    disc_param = optplan.GratingParametrization(simulation_space=sim_space,
+                                                inverted=True)
     trans_list.append(
         optplan.Transformation(
             name="cont_to_disc",
@@ -570,10 +623,9 @@ def gen_gds(save_folder: str, grating_len: float, wg_width: float) -> None:
     # Save the grating to `grating.gds`.
     grating = gdspy.Cell("GRATING", exclude_from_current=True)
     grating.add(gdspy.PolygonSet(grating_poly, 100))
-    gdspy.write_gds(
-        os.path.join(save_folder, "grating.gds"), [grating],
-        unit=1.0e-9,
-        precision=1.0e-9)
+    gdspy.write_gds(os.path.join(save_folder, "grating.gds"), [grating],
+                    unit=1.0e-9,
+                    precision=1.0e-9)
 
 
 if __name__ == "__main__":
@@ -586,8 +638,8 @@ if __name__ == "__main__":
         help="Must be either \"run\" to run an optimization, \"view\" to "
         "view the results, \"resume\" to resume an optimization, or "
         "\"gen_gds\" to generate the grating GDS file.")
-    parser.add_argument(
-        "save_folder", help="Folder containing optimization logs.")
+    parser.add_argument("save_folder",
+                        help="Folder containing optimization logs.")
 
     grating_len = 12000
     wg_width = 12000

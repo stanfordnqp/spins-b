@@ -146,6 +146,14 @@ class HermiteLevelSetParametrization(optplan.Parametrization):
     periods = types.ListType(types.IntType())
 
 
+
+@optplan.register_node_type()
+class DiscretePenalty(optplan.Function):
+    """Defines discreteness biasing penalty function."""
+    type = schema_utils.polymorphic_model_type(
+        "function.discrete_penalty")
+
+
 @optplan.register_node_type()
 class FabricationConstraint(optplan.Function):
     """Defines fabrication constraint penalty function.
