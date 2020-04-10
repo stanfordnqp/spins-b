@@ -1,0 +1,39 @@
+# Changelog
+We will try to document all notable changes in this file.
+
+## 2019-07-25
+### Added
+- Power transmission objective (optplan.PowerTransmission) that calculates total power passing through a plane via Poynting vector [@ludi1001]
+- DiffEpsilon accepts a GDS as a reference permittivity distribution [@vcruysse]
+- Custom material can be added via a CSV file [@jskarda]
+- Define simulation space using a list of 3D meshes (optplan.GdsMeshEps) [@ludi1001]
+- Use a full direct selection matrix that allows all permittivity values to vary [@ludi1001]
+
+### Changed
+- Fix bug for draw_slab in spins.gridlock.Grid that causes incorrect slab when drawing in 2D [@ludi1001]
+- Normalize plane wave source by simulation and set the Bloch vectory correctly [@ludi1001]
+
+## 2019-09-02
+### Changed
+- Grating parametrization allows the grating specification to be inverted so that the first edge is a falling edge [@ludi1001]
+- Grating parametrization constraints allows the constraint between the boundary of design area and first/last grating edge to be controlled [@ludi1001]
+
+## 2019-10-16
+### Changed
+- Grating example has more features: GDS generation, foreground/background GDS generated programmatically, minimize backreflection objective [@ludi1001]
+
+## 2020-03-06
+### Added
+- Allow using environment variable MAXWELL_SERVER to control Maxwell server location [@ludi1001]
+
+### Changed
+- Upgraded to gdspy 1.4+ [@ludi1001]
+- Correctly include loss from custom material loading [@ludi1001]
+
+## 2020-03-29
+### Added
+- Initial goos commits [@ludi1001]
+
+### Changed
+- Allow Gaussian beam source center to be defined outside of simulation region [@jskarda]
+- Make grating coupler example broadband [@nvsapra]

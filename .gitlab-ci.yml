@@ -1,7 +1,7 @@
 test:
   script:
     # Setup virtualenv.
-    - virtualenv -p python3 spins-env
+    - python3.8 -m venv spins-env
     - source spins-env/bin/activate
     # Install spins.
     - pip3 install .[test]

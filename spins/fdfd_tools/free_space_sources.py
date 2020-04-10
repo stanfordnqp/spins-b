@@ -5,9 +5,9 @@ from typing import Callable, List
 import numpy as np
 
 from spins import fdfd_tools
+from spins.fdfd_solvers import waveguide_mode
 from spins.fdfd_tools import vec, unvec
 from spins.fdfd_tools import operators, functional
-import spins.fdfd_solvers.waveguide_mode as waveguide_mode
 from spins.gridlock import Grid
 
 COS = np.cos
@@ -124,14 +124,20 @@ def scalar2rotated_vector_fields(eps_grid: Grid,
 
     #Make grid points
     xyz = xyz_shift[order[0]]
-    x_Ex, y_Ex, z_Ex = np.meshgrid(
-        xyz[order[0]], xyz[order[1]], xyz[order[2]], indexing='ij')
+    x_Ex, y_Ex, z_Ex = np.meshgrid(xyz[order[0]],
+                                   xyz[order[1]],
+                                   xyz[order[2]],
+                                   indexing='ij')
     xyz = xyz_shift[order[1]]
-    x_Ey, y_Ey, z_Ey = np.meshgrid(
-        xyz[order[0]], xyz[order[1]], xyz[order[2]], indexing='ij')
+    x_Ey, y_Ey, z_Ey = np.meshgrid(xyz[order[0]],
+                                   xyz[order[1]],
+                                   xyz[order[2]],
+                                   indexing='ij')
     xyz = xyz_shift[order[2]]
-    x_Ez, y_Ez, z_Ez = np.meshgrid(
-        xyz[order[0]], xyz[order[1]], xyz[order[2]], indexing='ij')
+    x_Ez, y_Ez, z_Ez = np.meshgrid(xyz[order[0]],
+                                   xyz[order[1]],
+                                   xyz[order[2]],
+                                   indexing='ij')
 
     #Make total rotation matrix
     k = np.array([0, 0, polarity])
@@ -159,11 +165,10 @@ def scalar2rotated_vector_fields(eps_grid: Grid,
     #Make H fields.
     dxes = [[dx[i] for i in order] for dx in dxes]
     e_vec = vec(E_fields)
-    h_vec = operators.e2h(
-        omega=omega,
-        dxes=dxes,
-        mu=vec([mu[i].transpose(order) for i in order]),
-        bloch_vec=bloch_vector) @ e_vec
+    h_vec = operators.e2h(omega=omega,
+                          dxes=dxes,
+                          mu=vec([mu[i].transpose(order) for i in order]),
+                          bloch_vec=bloch_vector) @ e_vec
     H_fields = unvec(h_vec, E_fields[0].shape)
 
     #Normalize fields.
@@ -316,13 +321,12 @@ def build_plane_wave_source(eps_grid: Grid,
     slices_P = [
         slice(sl.start + b, sl.stop - b) for sl, b in zip(slices_P, border)
     ]
-    P = waveguide_mode.compute_transmission_chew(
-        E=fields['E'],
-        H=fields['H'],
-        axis=axis,
-        omega=omega,
-        dxes=dxes,
-        slices=slices_P)
+    P = waveguide_mode.compute_transmission_chew(E=fields['E'],
+                                                 H=fields['H'],
+                                                 axis=axis,
+                                                 omega=omega,
+                                                 dxes=dxes,
+                                                 slices=slices_P)
     fields['E'] /= np.sqrt(abs(P))
     fields['H'] /= np.sqrt(abs(P))
     fields['E'] = [mask * e for e in fields['E']]
@@ -346,8 +350,10 @@ def build_plane_wave_source(eps_grid: Grid,
     for i in range(3):
         E[i][tuple(field_slices)] = fields['E'][i][tuple(field_slices)]
 
-    full = operators.e_full(
-        omega, dxes, vec(eps_grid.grids), bloch_vec=fields['wavevector'])
+    full = operators.e_full(omega,
+                            dxes,
+                            vec(eps_grid.grids),
+                            bloch_vec=fields['wavevector'])
     J_vec = 1 / (-1j * omega) * full @ vec(E)
     J_temp = unvec(J_vec, E[0].shape)
     J = np.zeros_like(J_temp)
@@ -430,8 +436,10 @@ def build_gaussian_source(eps_grid: Grid,
     for i in range(3):
         E[i][tuple(field_slices)] = fields['E'][i][tuple(field_slices)]
 
-    full = operators.e_full(
-        omega, dxes, vec(eps_grid.grids), bloch_vec=fields['wavevector'])
+    full = operators.e_full(omega,
+                            dxes,
+                            vec(eps_grid.grids),
+                            bloch_vec=fields['wavevector'])
     J_vec = 1 / (-1j * omega) * full @ vec(E)
     J_temp = unvec(J_vec, E[0].shape)
     J = np.zeros_like(J_temp)
