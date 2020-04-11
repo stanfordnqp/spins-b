@@ -385,11 +385,11 @@ def process_field(field: List,
         mag = (np.sqrt(
             np.abs(field[0])**2 + np.abs(field[1])**2 + np.abs(field[2])**2))
     elif vector_operation.lower() == "x":
-        mag = np.abs(field[0])
+        mag = field[0]
     elif vector_operation.lower() == "y":
-        mag = np.abs(field[1])
+        mag = field[1]
     elif vector_operation.lower() == "z":
-        mag = np.abs(field[2])
+        mag = field[2]
     mag = process_scalar(mag, scalar_operation=scalar_operation)
     return mag
 
