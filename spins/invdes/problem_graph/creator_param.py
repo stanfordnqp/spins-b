@@ -68,10 +68,11 @@ def create_grating_feature_constraint(
 
 
 @optplan.register_node(optplan.CubicParametrization)
+@optplan.register_node(optplan.BicubicLevelSetParametrization)
 @optplan.register_node(optplan.HermiteLevelSetParametrization)
 def create_cubic_or_hermite_levelset(
-        params: Union[optplan.CubicParametrization, optplan.
-                      HermiteLevelSetParametrization],
+        params: Union[optplan.CubicParametrization,
+                      optplan.HermiteLevelSetParametrization],
         work: workspace.Workspace) -> parametrization.CubicParam:
     design_dims = work.get_object(params.simulation_space).design_dims
 
@@ -121,21 +122,24 @@ def create_cubic_or_hermite_levelset(
     if params.type == "parametrization.hermite_levelset":
         from spins.invdes.parametrization import levelset_parametrization
         param_class = levelset_parametrization.HermiteLevelSet
+    elif params.type == "parametrization.bicubic_levelset":
+        from spins.invdes.parametrization import levelset_parametrization
+        param_class = levelset_parametrization.BicubicLevelSet
     elif params.type == "parametrization.cubic":
         param_class = parametrization.CubicParam
     else:
         raise ValueError("Unexpected parametrization type, got {}".format(
             params.type))
 
-    return param_class(
-        initial_value=init_val,
-        coarse_x=coarse_x,
-        coarse_y=coarse_y,
-        fine_x=fine_x,
-        fine_y=fine_y,
-        symmetry=reflection_symmetry,
-        periodicity=periodicity,
-        periods=periods)
+    return param_class(initial_value=init_val,
+                       coarse_x=coarse_x,
+                       coarse_y=coarse_y,
+                       fine_x=fine_x,
+                       fine_y=fine_y,
+                       symmetry=reflection_symmetry,
+                       periodicity=periodicity,
+                       periods=periods)
+
 
 class DiscretePenaltyFun(problem.OptimizationFunction):
     """
@@ -145,20 +149,23 @@ class DiscretePenaltyFun(problem.OptimizationFunction):
     The role of this term is to bias intermediate values of the parameterization
     towards discrete values 0 or 1.
     """
-    def __init__(self, fun: problem.OptimizationFunction)-> None:
+
+    def __init__(self, fun: problem.OptimizationFunction) -> None:
         super().__init__(fun)
 
     def eval(self, inputs: List[np.ndarray]) -> float:
         return np.sum(inputs[0] * (1 - inputs[0]))
 
-    def grad(self, inputs: List[np.ndarray], grad_val: np.ndarray) -> List[np.ndarray]:
+    def grad(self, inputs: List[np.ndarray],
+             grad_val: np.ndarray) -> List[np.ndarray]:
         penalty = 1 - 2 * inputs[0]
         return [grad_val * penalty]
 
+
 @optplan.register_node(optplan.DiscretePenalty)
-def create_discrete_penalty(param: optplan.DiscretePenalty, work: workspace.Workspace) -> DiscretePenaltyFun:
-    return DiscretePenaltyFun(
-            fun=work.get_object(workspace.VARIABLE_NODE))
+def create_discrete_penalty(param: optplan.DiscretePenalty,
+                            work: workspace.Workspace) -> DiscretePenaltyFun:
+    return DiscretePenaltyFun(fun=work.get_object(workspace.VARIABLE_NODE))
 
 
 class FabricationPenalty(problem.OptimizationFunction):
@@ -199,14 +206,14 @@ class FabricationPenalty(problem.OptimizationFunction):
 
     def calculate_objective_function(self, param) -> np.ndarray:
         if self.method == 0:
-            penalty = param.calculate_gap_penalty(
-                self.d_gap_factor * self.d_gap)
+            penalty = param.calculate_gap_penalty(self.d_gap_factor *
+                                                  self.d_gap)
         elif self.method == 1:
-            penalty = param.calculate_curv_penalty(
-                self.d_curv_factor * self.d_curv)
+            penalty = param.calculate_curv_penalty(self.d_curv_factor *
+                                                   self.d_curv)
         elif self.method == 2:
-            curv = param.calculate_curv_penalty(
-                self.d_curv_factor * self.d_curv)
+            curv = param.calculate_curv_penalty(self.d_curv_factor *
+                                                self.d_curv)
             gap = param.calculate_gap_penalty(self.d_gap_factor * self.d_gap)
             penalty = curv + gap
         else:
@@ -215,16 +222,16 @@ class FabricationPenalty(problem.OptimizationFunction):
 
     def calculate_gradient(self, param) -> List[np.ndarray]:
         if self.method == 0:
-            gradient = param.calculate_gap_penalty_gradient(
-                self.d_gap_factor * self.d_gap)
+            gradient = param.calculate_gap_penalty_gradient(self.d_gap_factor *
+                                                            self.d_gap)
         elif self.method == 1:
             gradient = param.calculate_curv_penalty_gradient(
                 self.d_curv_factor * self.d_curv)
         elif self.method == 2:
-            curv = param.calculate_curv_penalty_gradient(
-                self.d_curv_factor * self.d_curv)
-            gap = param.calculate_gap_penalty_gradient(
-                self.d_gap_factor * self.d_gap)
+            curv = param.calculate_curv_penalty_gradient(self.d_curv_factor *
+                                                         self.d_curv)
+            gap = param.calculate_gap_penalty_gradient(self.d_gap_factor *
+                                                       self.d_gap)
             gradient = curv + gap
         else:
             raise ValueError("Fabcon method is invalid.")
@@ -243,8 +250,7 @@ def create_fabrication_constraint(
     minimum_gap = params.minimum_gap / (dx / 2)
     methods = {"gap": 0, "curv": 1, "gap_and_curve": 2}
 
-    return FabricationPenalty(
-        fcon_gap=minimum_gap,
-        fcon_curv=minimum_curvature_diameter,
-        fabcon_method=methods[params.method],
-        apply_factors=params.apply_factors)
+    return FabricationPenalty(fcon_gap=minimum_gap,
+                              fcon_curv=minimum_curvature_diameter,
+                              fabcon_method=methods[params.method],
+                              apply_factors=params.apply_factors)
