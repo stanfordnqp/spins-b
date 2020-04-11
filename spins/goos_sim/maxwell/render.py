@@ -18,10 +18,12 @@ class RenderShape(goos.Function):
             mesh: simspace.MeshModel,
             wavelength: float,
             background: goos.material.Material = None,
+            simulation_symmetry: List[int] = None,
             num_points_per_arclen: float = 0.084,
     ) -> None:
         super().__init__(shape)
-        self._edge_coords = simspace.create_edge_coords(region, mesh.dx)
+        self._edge_coords = simspace.create_edge_coords(region, mesh.dx,
+                                                        simulation_symmetry)
         if background:
             bg_eps = goos.material.get_material(background).permittivity(
                 wavelength)
