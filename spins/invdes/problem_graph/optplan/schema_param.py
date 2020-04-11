@@ -146,12 +146,31 @@ class HermiteLevelSetParametrization(optplan.Parametrization):
     periods = types.ListType(types.IntType())
 
 
+@optplan.register_node_type()
+class BicubicLevelSetParametrization(optplan.Parametrization):
+    """Defines `BicubicLevelsetParametrization`.
+
+    Attributes:
+        simulation_space: Name of simulation space to reference to generate
+            the coarse grid.
+        undersample: How much the coarse grid undersamples the rough grid.
+        reflection_symmetry: List of booleans corresponding whether the
+            structure should be symmetric about the x- and y- axes.
+        init_method: Specifications on how to initialize the parametrization.
+    """
+    type = schema_utils.polymorphic_model_type(
+        "parametrization.bicubic_levelset")
+    simulation_space = optplan.ReferenceType(optplan.SimulationSpaceBase)
+    undersample = types.FloatType()
+    init_method = optplan.ReferenceType(Initializer)
+    reflection_symmetry = types.ListType(types.BooleanType())
+    periods = types.ListType(types.IntType())
+
 
 @optplan.register_node_type()
 class DiscretePenalty(optplan.Function):
     """Defines discreteness biasing penalty function."""
-    type = schema_utils.polymorphic_model_type(
-        "function.discrete_penalty")
+    type = schema_utils.polymorphic_model_type("function.discrete_penalty")
 
 
 @optplan.register_node_type()

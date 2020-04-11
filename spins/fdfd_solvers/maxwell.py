@@ -24,8 +24,9 @@ def upload_files(server_url: str, directory: str, filenames: List[str]):
             succeeded = False
             while not succeeded:
                 try:
-                    requests.post(
-                        server_url, data={'key': filename}, files={'file': f})
+                    requests.post(server_url,
+                                  data={'key': filename},
+                                  files={'file': f})
                     succeeded = True
                 except requests.exceptions.ConnectionError:
                     logger.exception('ConnectionError during upload: ' +
@@ -77,7 +78,7 @@ def write_field(filename_prefix: str, field):
 
 class MaxwellSolver:
     # Define default values for solver.
-    DEFAULT_ERROR_THRESHOLD = 1e-6
+    DEFAULT_ERROR_THRESHOLD = 1e-5
     DEFAULT_MAX_ITERS = 20000
     DEFAULT_MAXWELL_SERVER_PORT = 9041
 
@@ -180,10 +181,14 @@ class MaxwellSolver:
                 new_dxes.append(dx)
             dxes = new_dxes
 
-            spx, spy, spz = np.meshgrid(
-                dxes[1][0], dxes[1][1], dxes[1][2], indexing='ij')
-            sdx, sdy, sdz = np.meshgrid(
-                dxes[0][0], dxes[0][1], dxes[0][2], indexing='ij')
+            spx, spy, spz = np.meshgrid(dxes[1][0],
+                                        dxes[1][1],
+                                        dxes[1][2],
+                                        indexing='ij')
+            sdx, sdy, sdz = np.meshgrid(dxes[0][0],
+                                        dxes[0][1],
+                                        dxes[0][2],
+                                        indexing='ij')
             mult = np.multiply
             s = [
                 mult(mult(sdx, spy), spz),
@@ -232,18 +237,18 @@ class MaxwellSolver:
 
             xyz = ['x', 'y', 'z']
             for direc in range(3):
-                f.create_dataset(
-                    'sd_' + xyz[direc] + 'r',
-                    data=np.real(dxes[0][direc]).astype(np.float64))
-                f.create_dataset(
-                    'sd_' + xyz[direc] + 'i',
-                    data=np.imag(dxes[0][direc]).astype(np.float64))
-                f.create_dataset(
-                    'sp_' + xyz[direc] + 'r',
-                    data=np.real(dxes[1][direc]).astype(np.float64))
-                f.create_dataset(
-                    'sp_' + xyz[direc] + 'i',
-                    data=np.imag(dxes[1][direc]).astype(np.float64))
+                f.create_dataset('sd_' + xyz[direc] + 'r',
+                                 data=np.real(dxes[0][direc]).astype(
+                                     np.float64))
+                f.create_dataset('sd_' + xyz[direc] + 'i',
+                                 data=np.imag(dxes[0][direc]).astype(
+                                     np.float64))
+                f.create_dataset('sp_' + xyz[direc] + 'r',
+                                 data=np.real(dxes[1][direc]).astype(
+                                     np.float64))
+                f.create_dataset('sp_' + xyz[direc] + 'i',
+                                 data=np.imag(dxes[1][direc]).astype(
+                                     np.float64))
         # Write the rest of the files.
         write_field(local_prefix + 'e', fdfd_tools.unvec(epsilon, shape))
         write_field(local_prefix + 'J', fdfd_tools.unvec(J, shape))
@@ -398,11 +403,12 @@ class MaxwellSolver:
             file_prefix = os.path.join(download_dir, sim_name_prefix)
             q = None
             with h5py.File(file_prefix + 'qr') as f:
-                q = f['data'].value.astype(np.complex128)
+                q = f['data'][()].astype(np.complex128)
             with h5py.File(file_prefix + 'qi') as f:
-                q += 1j * f['data'].value.astype(np.complex128)
+                q += 1j * f['data'][()].astype(np.complex128)
 
             shutil.rmtree(download_dir)
+
             return [fdfd_tools.vec(Q) for Q in E], q**(0.5)
         else:
             shutil.rmtree(download_dir)
