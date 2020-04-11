@@ -69,6 +69,23 @@ class WaveguideModeSource(SimSource):
     power = goos.types.FloatType()
 
 
+@goos.polymorphic_model()
+class DipoleSource(SimSource):
+    """Represents a dipole source.
+
+    Attributes:
+        position: Position of the dipole (will snap to grid).
+        axis: Direction of the dipole (x:0, y:1, z:2).
+        phase: Phase of the dipole source (in radian).
+        power: Power assuming uniform dielectric space with the permittivity.
+    """
+    type = goos.ModelNameType("source.dipole_sourc")
+    position = goos.Vec3d()
+    axis = goos.types.IntType()
+    phase = goos.types.FloatType()
+    power = goos.types.FloatType()
+
+
 class SimOutput(goos.Model):
     name = goos.types.StringType(default=None)
 
@@ -155,7 +172,9 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
 
         # Create an empty grid to have access to `dxes` and `shape`.
         self._grid = gridlock.Grid(simspace.create_edge_coords(
-            simulation_space.sim_region, simulation_space.mesh.dx),
+            simulation_space.sim_region,
+            simulation_space.mesh.dx,
+            reflection_symmetry=simulation_space.reflection_symmetry),
                                    ext_dir=gridlock.Direction.z,
                                    initial=0,
                                    num_grids=3)
@@ -288,6 +307,9 @@ def _create_solver(solver_name: str, dims: Tuple[int, int, int]) -> Callable:
     elif solver_name == "maxwell_bicgstab":
         from spins.fdfd_solvers.maxwell import MaxwellSolver
         solver = MaxwellSolver(dims, solver="biCGSTAB")
+    elif solver_name == "maxwell_eig":
+        from spins.fdfd_solvers.maxwell import MaxwellSolver
+        solver = MaxwellSolver(dims, solver="Jacobi-Davidson")
     elif solver_name == "local_direct":
         solver = DIRECT_SOLVER
     else:
@@ -382,6 +404,8 @@ def _create_outputs(outputs: List[SimOutput]) -> List[SimOutputImpl]:
             output_impl = ElectricFieldImpl()
         elif type(out) == WaveguideModeOverlap:
             output_impl = WaveguideModeOverlapImpl(out)
+        elif type(out) == EigenValue:
+            output_impl = EigenValueImpl()
         else:
             raise ValueError("Unsupported output type, got {}".format(out.type))
         output_impls.append(output_impl)
@@ -464,6 +488,27 @@ class GaussianSourceImpl(SimSourceImpl):
         sim.source += source
 
 
+class DipoleSourceImpl(SimSourceImpl):
+
+    def __init__(self, source: DipoleSource) -> None:
+        self._src = source
+        self._J = None
+
+    def before_sim(self, sim: FdfdSimProp) -> None:
+        if self._J is None:
+            self._J = fdfd_solvers.dipole.build_dipole_source(
+                omega=2 * np.pi / sim.wlen,
+                dxes=sim.dxes,
+                eps=sim.eps,
+                position=sim.grid.pos2ind(self._src.position,
+                                          which_shifts=None),
+                axis=self._src.axis,
+                power=self._src.power,
+                phase=np.exp(1j * self._src.phase))
+
+        sim.source += self._J
+
+
 def _create_sources(sources: List[SimSource]) -> List[SimSourceImpl]:
     source_impls = []
     for src in sources:
@@ -471,6 +516,8 @@ def _create_sources(sources: List[SimSource]) -> List[SimSourceImpl]:
             source_impls.append(WaveguideModeSourceImpl(src))
         elif type(src) == GaussianSource:
             source_impls.append(GaussianSourceImpl(src))
+        if type(src) == DipoleSource:
+            source_impls.append(DipoleSourceImpl(src))
         else:
             raise ValueError("Unsupported source type, got {}".format(src.type))
     return source_impls
@@ -500,6 +547,7 @@ class FdfdSimulation(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
                 eps_rendered = render.RenderShape(
                     self._eps,
                     region=simulation_space.sim_region,
+                    simulation_symmetry=simulation_space.reflection_symmetry,
                     mesh=simulation_space.mesh,
                     background=background,
                     wavelength=wlen)
@@ -534,11 +582,13 @@ def fdfd_simulation(wavelength: float,
                     simulation_space: simspace.SimulationSpace,
                     return_eps: bool = False,
                     **kwargs) -> SimulateNode:
-    eps = render.RenderShape(eps,
-                             region=simulation_space.sim_region,
-                             mesh=simulation_space.mesh,
-                             background=background,
-                             wavelength=wavelength)
+    eps = render.RenderShape(
+        eps,
+        region=simulation_space.sim_region,
+        simulation_symmetry=simulation_space.reflection_symmetry,
+        mesh=simulation_space.mesh,
+        background=background,
+        wavelength=wavelength)
     sim = SimulateNode(eps=eps,
                        wavelength=wavelength,
                        simulation_space=simulation_space,
@@ -547,3 +597,223 @@ def fdfd_simulation(wavelength: float,
         return sim, eps
     else:
         return sim
+
+
+@dataclasses.dataclass
+class EigSimProp:
+    """Represents properties of a FDFD simulation."""
+    eps: np.ndarray
+    source: np.ndarray
+    wlen: float
+    dxes: List[np.ndarray]
+    pml_layers: List[int]
+    bloch_vec: np.ndarray = None
+    symmetry: np.ndarray = np.zeros(3)
+    fields: List[np.ndarray] = None
+    omegas: List[complex] = None
+    grid: gridlock.Grid = None
+
+
+class SimulateEigNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
+    node_type = "sim.maxwell.simulate_eig_node"
+
+    def __init__(
+            self,
+            eps: goos.Function,
+            sources: List[SimSource],
+            solver: str,
+            wavelength: float,
+            bloch_vector: List[float],
+            simulation_space: simspace.SimulationSpace,
+            outputs: List[SimOutput],
+    ) -> None:
+        # Determine the output flow types.
+        output_flow_types = [out.Attributes.output_type for out in outputs]
+        output_names = [out.name for out in outputs]
+
+        super().__init__([eps],
+                         flow_names=output_names,
+                         flow_types=output_flow_types)
+
+        # Create an empty grid to have access to `dxes` and `shape`.
+        self._grid = gridlock.Grid(simspace.create_edge_coords(
+            simulation_space.sim_region,
+            simulation_space.mesh.dx,
+            reflection_symmetry=simulation_space.reflection_symmetry),
+                                   ext_dir=gridlock.Direction.z,
+                                   initial=0,
+                                   num_grids=3)
+        self._dxes = [self._grid.dxyz, self._grid.autoshifted_dxyz()]
+
+        eigen_solvers = ["maxwell_eig", "local_direct_eig"]
+        if solver in eigen_solvers:
+            self._solver = _create_solver(solver, self._grid.shape)
+        else:
+            raise ValueError(
+                "Invalid solver, solver for eigensolves need to be in " +
+                str(eigen_solvers) + ".")
+        self._simspace = simulation_space
+        if bloch_vector:
+            self._bloch_vector = bloch_vector
+        else:
+            self._bloch_vector = np.array([0, 0, 0])
+        self._wlen = wavelength  #this will be used for the initial guess
+        self._pml_layers = [
+            int(length / self._simspace.mesh.dx)
+            for length in self._simspace.pml_thickness
+        ]
+        self._symmetry = simulation_space.reflection_symmetry
+
+        self._sources = _create_sources(sources)
+        self._outputs = _create_outputs(outputs)
+
+        # Handle caching of simulation results.
+        self._last_results = None
+        self._last_eps = None
+
+    def eval(self, input_vals: List[goos.Flow]) -> goos.ArrayFlow:
+        """Runs the simulation.
+
+        Args:
+            input_vals: List with single element corresponding to the
+                permittivity distribution.
+
+        Returns:
+            Simulated fields.
+        """
+        if self._last_eps is None or self._last_eps != input_vals[0]:
+            eps = input_vals[0].array
+            sim = EigSimProp(eps=eps,
+                             source=np.zeros_like(eps),
+                             wlen=self._wlen,
+                             dxes=self._dxes,
+                             pml_layers=self._pml_layers,
+                             bloch_vec=self._bloch_vector,
+                             symmetry=self._symmetry,
+                             grid=self._grid)
+
+            for src in self._sources:
+                src.before_sim(sim)
+
+            for out in self._outputs:
+                out.before_sim(sim)
+
+            #TODO vcruysse: for now we limit to 1 eigenvalue
+            fields, omega = self._solver.solve(omega=2 * np.pi / sim.wlen,
+                                               dxes=sim.dxes,
+                                               J=fdfd_tools.vec(sim.source),
+                                               epsilon=fdfd_tools.vec(sim.eps),
+                                               mu=None,
+                                               bloch_vec=sim.bloch_vec,
+                                               pml_layers=sim.pml_layers,
+                                               symmetry=sim.symmetry,
+                                               n_eig=1)
+            fields = fdfd_tools.unvec(fields[0], eps[0].shape)
+            sim.fields = np.stack(fields, axis=0)
+            sim.omegas = np.real(omega[0])
+
+            self._last_eps = input_vals[0]
+            self._last_results = sim
+
+        return goos.ArrayFlow(
+            [out.eval(self._last_results) for out in self._outputs])
+
+    def grad(self, input_vals: List[goos.Flow],
+             grad_val: goos.ArrayFlow.Grad) -> List[goos.Flow.Grad]:
+        """Runs the simulation.
+
+        Args:
+            input_vals: List with single element corresponding to the
+                permittivity distribution.
+
+        Returns:
+            Simulated fields.
+        """
+        if self._last_eps is None or self._last_eps != input_vals[0]:
+            eps = input_vals[0].array
+            sim = EigSimProp(eps=eps,
+                             source=np.zeros_like(eps),
+                             wlen=self._wlen,
+                             dxes=self._dxes,
+                             pml_layers=self._pml_layers,
+                             bloch_vec=self._bloch_vector,
+                             grid=self._grid)
+
+            for out in self._outputs:
+                out.before_adjoint_sim(sim)
+
+            #TODO vcruysse: for now we limit to 1 eigenvalue
+            fields, omega = self._solver.solve(omega=2 * np.pi / sim.wlen,
+                                               dxes=sim.dxes,
+                                               J=fdfd_tools.vec(sim.source),
+                                               epsilon=fdfd_tools.vec(sim.eps),
+                                               mu=None,
+                                               bloch_vec=sim.bloch_vec,
+                                               pml_layers=sim.pml_layers,
+                                               symmetry=sim.symmetry,
+                                               n_eig=1)
+            fields = fdfd_tools.unvec(fields[0], eps[0].shape)
+            sim.fields = np.stack(fields, axis=0)
+            sim.omegas = np.real(omega[0])
+
+            self._last_eps = input_vals[0]
+            self._last_results = sim
+
+        fields = self._last_results.fields
+        omega = self._last_results.omegas
+        eps = self._last_results.eps
+        domega_deps = np.real(-omega / 2 * 1 /
+                              (fields.flatten().conj() @ fields.flatten()) *
+                              fields.conj() * eps**(-1) * fields)
+
+        # find the grad for omega
+        for out, grad in zip(self._outputs, grad_val):
+            if isinstance(out, EigenValueImpl):
+                df_domega = grad.array_grad[0]
+
+        return [goos.NumericFlow.Grad(array_grad=df_domega * domega_deps)]
+
+
+def eig_simulation(wavelength: float,
+                   eps: goos.Shape,
+                   background: goos.material.Material,
+                   simulation_space: simspace.SimulationSpace,
+                   bloch_vector: List[float],
+                   get_eps: bool = False,
+                   **kwargs):
+    eps = render.RenderShape(
+        eps,
+        region=simulation_space.sim_region,
+        simulation_symmetry=simulation_space.reflection_symmetry,
+        mesh=simulation_space.mesh,
+        background=background,
+        wavelength=wavelength)
+    sim = SimulateEigNode(eps=eps,
+                          wavelength=wavelength,
+                          simulation_space=simulation_space,
+                          bloch_vector=bloch_vector,
+                          **kwargs)
+    if get_eps:
+        return sim, eps
+    else:
+        return sim
+
+
+@goos.polymorphic_model()
+class EigenValue(SimOutput):
+    """Retrieves an eigen value from an eigensimulation.
+
+    Attributes:
+        bloch_vector: Bloch_vector to retrieve eigenvalue.
+    """
+    type = goos.ModelNameType("output.eigen_value")
+    bloch_vector = goos.types.FloatType()
+
+    class Attributes:
+        output_type = goos.Function
+
+
+class EigenValueImpl(SimOutputImpl):
+
+    def eval(self, sim: EigSimProp) -> goos.NumericFlow:
+        return goos.NumericFlow(sim.omegas)
