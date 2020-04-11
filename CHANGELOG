@@ -38,7 +38,7 @@ We will try to document all notable changes in this file.
 - Allow Gaussian beam source center to be defined outside of simulation region [@jskarda]
 - Make grating coupler example broadband [@nvsapra]
 
-
 ## 2020-04-10
 ### Added
 - Discreteness penalty for direct parametrizations [@nvsapra]
+- Dipole source [@vcruysse]

@@ -238,13 +238,19 @@ class CubicParam(Parametrization):
 
     def get_structure(self) -> np.ndarray:
         z_cubic = self.vec2f @ self.vector
-        return 1 / (1 + np.exp(-self.k * (2 * z_cubic - 1)))
+        if self.k:
+            return 1 / (1 + np.exp(-self.k * (2 * z_cubic - 1)))
+        else:
+            return z_cubic
 
     def calculate_gradient(self) -> np.ndarray:
         z_cubic = self.vec2f @ self.vector
-        return sparse.diags(2 * self.k * np.exp(-self.k * (2 * z_cubic - 1)) /
-                            (1 + np.exp(-self.k *
-                                        (2 * z_cubic - 1)))**2) @ self.vec2f
+        if self.k:
+            return sparse.diags(2 * self.k * np.exp(-self.k * (2 * z_cubic - 1)) /
+                                   (1 + np.exp(-self.k *
+                                       (2 * z_cubic - 1)))**2) @ self.vec2f
+        else:
+            return self.vec2f
 
     def get_bounds(self):
         vec_len = len(self.vector)

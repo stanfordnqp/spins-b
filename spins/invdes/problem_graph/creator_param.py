@@ -97,7 +97,7 @@ def create_cubic_or_hermite_levelset(
 
     # Create the coarse grid.
     if periodicity[0]:
-        n_x = np.round((fine_x[-1] - fine_x[0]) / undersample) + 1
+        n_x = int(np.round((fine_x[-1] - fine_x[0]) / undersample) + 1)
         coarse_x = np.linspace(fine_x[0], fine_x[-1] + 1, n_x)
     else:
         coarse_x = np.arange(-design_dims[0] / 2 - undersample,
@@ -106,7 +106,7 @@ def create_cubic_or_hermite_levelset(
                  coarse_x[0]) / 2  # this is necessary to have correct symmetry
 
     if periodicity[1]:
-        n_y = np.round((fine_y[-1] - fine_y[0]) / undersample) + 1
+        n_y = int(np.round((fine_y[-1] - fine_y[0]) / undersample) + 1)
         coarse_y = np.linspace(fine_y[0], fine_y[-1] + 1, n_y)
     else:
         coarse_y = np.arange(-design_dims[1] / 2 - undersample,

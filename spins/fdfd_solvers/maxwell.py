@@ -77,13 +77,13 @@ def write_field(filename_prefix: str, field):
 
 class MaxwellSolver:
     # Define default values for solver.
-    DEFAULT_ERROR_THRESHOLD = 1e-6
+    DEFAULT_ERROR_THRESHOLD = 1e-5
     DEFAULT_MAX_ITERS = 20000
     DEFAULT_MAXWELL_SERVER_PORT = 9041
 
     def __init__(self,
                  shape: np.ndarray,
-                 server=os.getenv("MAXWELL_SERVER", "localhost:9041"),
+                 server='localhost:9041',
                  err_thresh=DEFAULT_ERROR_THRESHOLD,
                  max_iters=DEFAULT_MAX_ITERS,
                  solver='CG'):
@@ -312,10 +312,10 @@ class MaxwellSolver:
                     (dummy, -np.flip(E[2][1:, :, :], 0), E[2]), axis=0)
             elif symmetry[0] == 2:
                 E[0] = np.concatenate((-np.flip(E[0], 0), E[0]), axis=0)
-                E[1] = np.concatenate((dummy, np.flip(E[1][1:, :, :], 0), E[1]),
-                                      axis=0)
-                E[2] = np.concatenate((dummy, np.flip(E[2][1:, :, :], 0), E[2]),
-                                      axis=0)
+                E[1] = np.concatenate(
+                    (dummy, np.flip(E[1][1:, :, :], 0), E[1]), axis=0)
+                E[2] = np.concatenate(
+                    (dummy, np.flip(E[2][1:, :, :], 0), E[2]), axis=0)
 
             dummy = np.expand_dims(np.zeros_like(E[1][:, 0, :]), 1)
             if symmetry[1] == 1:
@@ -325,11 +325,11 @@ class MaxwellSolver:
                 E[2] = np.concatenate(
                     (dummy, -np.flip(E[2][:, 1:, :], 1), E[2]), axis=1)
             elif symmetry[1] == 2:
-                E[0] = np.concatenate((dummy, np.flip(E[0][:, 1:, :], 1), E[0]),
-                                      axis=1)
+                E[0] = np.concatenate(
+                    (dummy, np.flip(E[0][:, 1:, :], 1), E[0]), axis=1)
                 E[1] = np.concatenate((-np.flip(E[1], 1), E[1]), axis=1)
-                E[2] = np.concatenate((dummy, np.flip(E[2][:, 1:, :], 1), E[2]),
-                                      axis=1)
+                E[2] = np.concatenate(
+                    (dummy, np.flip(E[2][:, 1:, :], 1), E[2]), axis=1)
 
             dummy = np.expand_dims(np.zeros_like(E[1][:, :, 0]), 2)
             if symmetry[2] == 1:
@@ -339,10 +339,10 @@ class MaxwellSolver:
                     (dummy, -np.flip(E[1][:, :, 1:], 2), E[1]), axis=2)
                 E[2] = np.concatenate((np.flip(E[2], 2), E[2]), axis=2)
             elif symmetry[2] == 2:
-                E[0] = np.concatenate((dummy, np.flip(E[0][:, :, 1:], 2), E[0]),
-                                      axis=2)
-                E[1] = np.concatenate((dummy, np.flip(E[1][:, :, 1:], 2), E[1]),
-                                      axis=2)
+                E[0] = np.concatenate(
+                    (dummy, np.flip(E[0][:, :, 1:], 2), E[0]), axis=2)
+                E[1] = np.concatenate(
+                    (dummy, np.flip(E[1][:, :, 1:], 2), E[1]), axis=2)
                 E[2] = np.concatenate((-np.flip(E[2], 2), E[2]), axis=2)
 
             return E
@@ -382,6 +382,7 @@ class MaxwellSolver:
             for i in range(3):
                 E[i] = np.multiply(E[i], np.conj(s[i]))
 
+
         # Remove downloaded files.
         if solver_info:
             file_prefix = os.path.join(download_dir, sim_name_prefix)
@@ -398,11 +399,12 @@ class MaxwellSolver:
             file_prefix = os.path.join(download_dir, sim_name_prefix)
             q = None
             with h5py.File(file_prefix + 'qr') as f:
-                q = f['data'].value.astype(np.complex128)
+                q = f['data'][()].astype(np.complex128)
             with h5py.File(file_prefix + 'qi') as f:
-                q += 1j * f['data'].value.astype(np.complex128)
+                q += 1j * f['data'][()].astype(np.complex128)
 
             shutil.rmtree(download_dir)
+
             return [fdfd_tools.vec(Q) for Q in E], q**(0.5)
         else:
             shutil.rmtree(download_dir)
