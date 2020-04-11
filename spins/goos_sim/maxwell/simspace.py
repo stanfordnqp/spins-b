@@ -1,10 +1,14 @@
-from typing import Tuple
+from typing import List, Tuple
+
+import logging
 
 import numpy as np
 
 from spins import goos
 from spins import fdfd_tools
 from spins import gridlock
+
+logger = logging.getLogger(__name__)
 
 
 class MeshModel(goos.Model):
@@ -35,6 +39,10 @@ class SimulationSpace(goos.Model):
         mesh: Meshing information. This describes how the simulation region
             should be meshed.
         sim_region: Rectangular prism simulation domain.
+        reflection_symmetry: Three element list with symmetry values in every axis
+                            - 0: no symmetry
+                            - 1: electric anti-symmetry around the center
+                            - 2: electric symmetry around the center
     """
     type = goos.ModelNameType("simulation_space")
     mesh = goos.types.PolyModelType(MeshModel)
@@ -42,10 +50,15 @@ class SimulationSpace(goos.Model):
     pml_thickness = goos.types.ListType(goos.types.IntType(),
                                         min_size=6,
                                         max_size=6)
+    reflection_symmetry = goos.types.ListType(goos.types.IntType(),
+                                              min_size=3,
+                                              max_size=3)
 
 
-def create_edge_coords(sim_region: goos.Box3d,
-                       dx: float) -> fdfd_tools.EdgeCoords:
+def create_edge_coords(
+        sim_region: goos.Box3d,
+        dx: float,
+        reflection_symmetry: List[int] = None) -> fdfd_tools.EdgeCoords:
     """Creates the edge coordinates of the grid for a uniform grid.
 
     Args:
@@ -56,9 +69,24 @@ def create_edge_coords(sim_region: goos.Box3d,
         Tuple where each element corresponds to one axis and contains an array
         that has the coordinates for the grid along that axis.
     """
-    extents = np.array(sim_region.extents)
+    if reflection_symmetry is None:
+        reflection_symmetry = [0, 0, 0]
+
+    extents_raw = np.array(sim_region.extents)
     # Fill in `dx` for any extents that are smaller than `dx`.
-    extents = np.maximum(extents, dx)
+    extents = np.maximum(extents_raw, dx)
+
+    # Give warning and modify simulation extent, if it will produce an odd dxes
+    # length in a symmetric axis
+    for i, ext in enumerate(extents):
+        if reflection_symmetry[i]:
+            if not (ext / (2 * dx)).is_integer():
+                extents[i] = np.floor(ext / (2 * dx)) * 2 * dx
+                logger.warning(
+                    "Symmetry requires simulation extents to be an integer "
+                    "multiple of `2 * dx`, the simulation extents for {} "
+                    "direction has been changed to {}".format(
+                        "xyz"[i], extents[i]))
 
     xyz_min = np.array(sim_region.center) - np.array(extents) / 2
     xyz_max = np.array(sim_region.center) + np.array(extents) / 2

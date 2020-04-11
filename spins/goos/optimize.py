@@ -20,7 +20,8 @@ class ScipyOptimizer(goos.Action):
                  iteration: goos.Variable = None,
                  max_iters: int = None,
                  ftol: float = None,
-                 gtol: float = None) -> None:
+                 gtol: float = None,
+                 maxls: int = None) -> None:
         """Creates a new optimizer.
 
         Args:
@@ -38,6 +39,7 @@ class ScipyOptimizer(goos.Action):
             max_iters: Maximum number of iterations to run.
             ftol: Function tolerance convergence criterion.
             gtol: Gradient tolerance convergence criterion.
+            maxls: Maximum number of line search steps per iteration. Default is 20.
         """
         if not constraints_ineq:
             constraints_ineq = []
@@ -66,6 +68,10 @@ class ScipyOptimizer(goos.Action):
         if gtol:
             self._options["options"].update({
                 "gtol": gtol,
+            })
+        if maxls:
+            self._options["options"].update({
+                "maxls": maxls,
             })
 
     def run(self, plan: goos.OptimizationPlan):

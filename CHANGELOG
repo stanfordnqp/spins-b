@@ -40,5 +40,6 @@ We will try to document all notable changes in this file.
 
 ## 2020-04-10
 ### Added
-- Discreteness penalty for direct parametrizations [@nvsapra]
+- (invdes) Discreteness penalty for direct parametrizations [@nvsapra]
+- (goos) Array slicing function [@vcruysse]
 - Dipole source [@vcruysse]

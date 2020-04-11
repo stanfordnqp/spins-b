@@ -520,3 +520,44 @@ class Sigmoid(Function):
         grad_flow = copy.deepcopy(grad_val)
         grad_flow.array_grad *= self._sig * (1 - self._sig)
         return [grad_flow]
+
+
+class Slice(Function):
+    node_type = "goos.function.slice"
+
+    def __init__(self, fun: Function, slices: List[Union[int, List[int],
+                                                         str]]) -> None:
+        super().__init__(fun)
+        self._slices = slices
+
+    def eval(self, inputs: List[goos.NumericFlow]) -> goos.NumericFlow:
+        shape = inputs[0].array.shape
+        slices = self._make_slices(shape)
+
+        return goos.NumericFlow(inputs[0].array[slices])
+
+    def grad(self, inputs: List[goos.NumericFlow],
+             grad_val: goos.NumericFlow.Grad) -> goos.NumericFlow.Grad:
+        shape = inputs[0].array.shape
+        slices = self._make_slices(shape)
+
+        grad = type(inputs[0]).Grad()
+        grad.array_grad = np.zeros_like(inputs[0].array)
+        grad.array_grad[slices] = grad_val.array_grad
+        return [grad]
+
+    def _make_slices(self, shape) -> List[slice]:
+        slices = []
+        for i, dim in enumerate(shape):
+            if isinstance(self._slices[i], int):
+                slices += [slice(self._slices[i], self._slices[i] + 1)]
+            elif isinstance(self._slices[i], List):
+                slices += [slice(self._slices[i][0], self._slices[i][1])]
+            elif self._slices[i] == "c" or self._slices[i] == "center":
+                slices += [slice(dim // 2, dim // 2 + 1)]
+            elif self._slices[i] is None:
+                slices += [slice(0, dim)]
+            else:
+                raise ValueError("Invalid slice value, got " +
+                                 str(self._slices[i]))
+        return tuple(slices)
