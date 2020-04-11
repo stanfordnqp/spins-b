@@ -79,7 +79,7 @@ class DipoleSource(SimSource):
         phase: Phase of the dipole source (in radian).
         power: Power assuming uniform dielectric space with the permittivity.
     """
-    type = goos.ModelNameType("source.dipole_sourc")
+    type = goos.ModelNameType("source.dipole_source")
     position = goos.Vec3d()
     axis = goos.types.IntType()
     phase = goos.types.FloatType()
@@ -516,7 +516,7 @@ def _create_sources(sources: List[SimSource]) -> List[SimSourceImpl]:
             source_impls.append(WaveguideModeSourceImpl(src))
         elif type(src) == GaussianSource:
             source_impls.append(GaussianSourceImpl(src))
-        if type(src) == DipoleSource:
+        elif type(src) == DipoleSource:
             source_impls.append(DipoleSourceImpl(src))
         else:
             raise ValueError("Unsupported source type, got {}".format(src.type))
