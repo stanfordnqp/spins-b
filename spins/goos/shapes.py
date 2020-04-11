@@ -321,6 +321,59 @@ def pixelated_cont_shape(
                                    **kwargs)
 
 
+def cubic_param_shape(
+        initializer: Callable,
+        extents: np.ndarray,
+        pixel_spacing: float,
+        control_point_spacing: float,
+        pos: Union[np.ndarray, goos.Function],
+        var_name: Optional[str] = None,
+        reflection_symmetry: List[int] = None,
+        periods: List[int] = None,
+        **kwargs,
+) -> Tuple[goos.Variable, Shape]:
+    """Creates a new continuous parametrization using bicubic interpolation.
+
+    The values of the parametrization are governed by bicubic interpolation
+    on certain control points. Control points are defined with spacing
+    given by `control_point_spacing`.
+
+    Args:
+        initializer: A callable to initialize values for the shape. This should
+            accept a single argument `size` and return an array of values with
+            shape `size`.
+        extents: Extents of the shape.
+        pixel_spacing: The pixel size will be given by
+            `(pixel_spacing, pixel_spacing, extents[2])`.
+        control_point_spacing: Spacing between two control points.
+        var_name: Name to give the variable.
+        pos: Position of the shape.
+        **kwargs: Additional argument to pass to shape constructor.
+
+    Returns:
+        A tuple `(var, shape)` where `var` is the variable containing the values
+        and `shape` is the newly created shape.
+    """
+    # TODO(vcruysse): Stop using the old parametrization implementation.
+    from spins.goos import compat
+    from spins.invdes.problem_graph import optplan
+
+    if not isinstance(pos, goos.Function):
+        pos = goos.Constant(pos)
+
+    return compat.compat_param(
+        param=optplan.CubicParametrization(
+            undersample=control_point_spacing / pixel_spacing,
+            reflection_symmetry=reflection_symmetry,
+            periods=periods),
+        initializer=initializer,
+        extents=extents,
+        pixel_size=[pixel_spacing, pixel_spacing, extents[2]],
+        pos=pos,
+        var_name=var_name,
+        **kwargs)
+
+
 class GroupShape(goos.ArrayFlowOpMixin, Shape):
     node_type = "goos.shape.group"
 
