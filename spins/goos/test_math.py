@@ -235,3 +235,34 @@ def test_sigmoid_with_scalar_ops():
         np.testing.assert_allclose(y.get().array, 1.7310585786300)
         np.testing.assert_allclose(
             y.get_grad([x])[0].array_grad, [0.39322386648296, 0.7864477329659])
+
+
+def test_slice():
+    with goos.OptimizationPlan() as plan:
+        x = goos.Variable([[0, 1, 2, 4, 5], [6, 7, 8, 9, 10],
+                           [11, 12, 13, 14, 15], [16, 17, 18, 19, 20],
+                           [21, 22, 23, 24, 25]])
+
+        t = goos.Slice(x, ['c', 'c'])
+        np.testing.assert_allclose(t.get().array, 13)
+        g = np.array([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 1, 0, 0],
+                      [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
+        np.testing.assert_allclose(t.get_grad([x])[0].array_grad, g)
+
+        t = goos.Slice(x, [[1, 4], 'c'])
+        np.testing.assert_allclose(t.get().array, [[8], [13], [18]])
+        g = np.array([[0, 0, 0, 0, 0], [0, 0, 1, 0, 0], [0, 0, 1, 0, 0],
+                      [0, 0, 1, 0, 0], [0, 0, 0, 0, 0]])
+        np.testing.assert_allclose(t.get_grad([x])[0].array_grad, g)
+
+        t = goos.Slice(x, [3, [1, 3]])
+        np.testing.assert_allclose(t.get().array, [[17, 18]])
+        g = np.array([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0],
+                      [0, 1, 1, 0, 0], [0, 0, 0, 0, 0]])
+        np.testing.assert_allclose(t.get_grad([x])[0].array_grad, g)
+
+        t = goos.Slice(x, [3, None])
+        np.testing.assert_allclose(t.get().array, [[16, 17, 18, 19, 20]])
+        g = np.array([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0],
+                      [1, 1, 1, 1, 1], [0, 0, 0, 0, 0]])
+        np.testing.assert_allclose(t.get_grad([x])[0].array_grad, g)
