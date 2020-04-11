@@ -301,12 +301,22 @@ class GratingL2D(goos.Action):
         if not self._use_edge_locs:
             widths = np.r_[edges[0], edges[1:] - edges[:-1]]
             plan.set_var_value(self._disc_widths, widths)
+
+            if np.isscalar(self._min_features):
+                min_feats = self._min_features
+            else:
+                min_feats = np.array([self._min_features[i] for i in levels])
+
+            if self._max_features is None:
+                max_feats = np.inf
+            elif np.isscalar(self._max_features):
+                max_feats = self._max_features
+            else:
+                max_feats = np.array([self._max_features[i] for i in levels])
+
             ones = np.ones_like(widths)
-            ones_no_start = np.array(ones)
-            ones_no_start[0] = 0
-            plan.set_var_bounds(
-                self._disc_widths,
-                [ones_no_start * self._min_features, ones * np.inf])
+            plan.set_var_bounds(self._disc_widths,
+                                [ones * min_feats, ones * max_feats])
         else:
             plan.set_var_value(self._disc_widths, edges)
             ones = np.ones_like(edges)
