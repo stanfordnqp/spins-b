@@ -60,3 +60,120 @@ def test_pixelated_cont_shape_flow_get_shape():
 
     shape = shapes.PixelatedContShapeFlow.get_shape(extents, pixel_size)
     assert shape == [len(coords[0]), len(coords[1]), len(coords[2])]
+
+
+def make_cuboid_flow_grad(index, priority=0):
+    extents = [0, 0, 0]
+    pos = [index, 0, 0]
+    shape = goos.cuboid(extents=extents, pos=pos, priority=priority)
+    flow = goos.CuboidFlow(extents=extents, pos=pos, priority=priority)
+    grad = goos.CuboidFlow.Grad(pos_grad=[index, 0, 0])
+    return shape, flow, grad
+
+
+def test_group_shape_1_shape():
+    with goos.OptimizationPlan() as plan:
+        shape, shape_flow, shape_grad = make_cuboid_flow_grad(1)
+        group = goos.GroupShape([shape])
+
+        inputs = [shape_flow]
+
+        assert group.eval(inputs) == goos.ArrayFlow([shape_flow])
+
+        assert group.grad(inputs,
+                          goos.ArrayFlow.Grad([shape_grad])) == [shape_grad]
+
+
+def test_group_shape_2_shape():
+    with goos.OptimizationPlan() as plan:
+        shape1, flow1, grad1 = make_cuboid_flow_grad(1)
+        shape2, flow2, grad2 = make_cuboid_flow_grad(2)
+        group = goos.GroupShape([shape1, shape2])
+
+        inputs = [flow1, flow2]
+        assert group.eval(inputs) == goos.ArrayFlow([flow1, flow2])
+
+        assert group.grad(inputs,
+                          goos.ArrayFlow.Grad([grad1,
+                                               grad2])) == [grad1, grad2]
+
+
+def test_group_shape_2_shape_priority():
+    with goos.OptimizationPlan() as plan:
+        shape1, flow1, grad1 = make_cuboid_flow_grad(1, priority=1)
+        shape2, flow2, grad2 = make_cuboid_flow_grad(2)
+        group = goos.GroupShape([shape1, shape2])
+
+        inputs = [flow1, flow2]
+        assert group.eval(inputs) == goos.ArrayFlow([flow2, flow1])
+
+        assert group.grad(inputs,
+                          goos.ArrayFlow.Grad([grad2,
+                                               grad1])) == [grad1, grad2]
+
+
+def test_group_shape_3_shape_priority():
+    with goos.OptimizationPlan() as plan:
+        shape1, flow1, grad1 = make_cuboid_flow_grad(1, priority=2)
+        shape2, flow2, grad2 = make_cuboid_flow_grad(2)
+        shape3, flow3, grad3 = make_cuboid_flow_grad(3, priority=1)
+        group = goos.GroupShape([shape1, shape2, shape3])
+
+        inputs = [flow1, flow2, flow3]
+        assert group.eval(inputs) == goos.ArrayFlow([flow2, flow3, flow1])
+        assert group.grad(inputs,
+                          goos.ArrayFlow.Grad([grad2, grad3, grad1
+                                              ])) == [grad1, grad2, grad3]
+
+
+def test_group_shape_3_shape_priority_stable_sort():
+    with goos.OptimizationPlan() as plan:
+        shape1, flow1, grad1 = make_cuboid_flow_grad(1, priority=2)
+        shape2, flow2, grad2 = make_cuboid_flow_grad(2, priority=1)
+        shape3, flow3, grad3 = make_cuboid_flow_grad(3, priority=1)
+        group = goos.GroupShape([shape1, shape2, shape3])
+
+        inputs = [flow1, flow2, flow3]
+        assert group.eval(inputs) == goos.ArrayFlow([flow2, flow3, flow1])
+        assert group.grad(inputs,
+                          goos.ArrayFlow.Grad([grad2, grad3, grad1
+                                              ])) == [grad1, grad2, grad3]
+
+
+def test_group_shape_array():
+    with goos.OptimizationPlan() as plan:
+        shape1, flow1, grad1 = make_cuboid_flow_grad(1)
+        shape2, flow2, grad2 = make_cuboid_flow_grad(2)
+        shape3, flow3, grad3 = make_cuboid_flow_grad(3)
+        group = goos.GroupShape([shape1, goos.GroupShape([shape2, shape3])])
+
+        inputs = [flow1, goos.ArrayFlow([flow2, flow3])]
+        assert group.eval(inputs) == goos.ArrayFlow([flow1, flow2, flow3])
+        assert (group.grad(inputs, goos.ArrayFlow.Grad(
+            [grad1, grad2,
+             grad3])) == [grad1, goos.ArrayFlow.Grad([grad2, grad3])])
+
+
+def test_group_shape_array_priority():
+    with goos.OptimizationPlan() as plan:
+        shape1, flow1, grad1 = make_cuboid_flow_grad(1, priority=2)
+        shape2, flow2, grad2 = make_cuboid_flow_grad(2)
+        shape3, flow3, grad3 = make_cuboid_flow_grad(3, priority=1)
+        shape4, flow4, grad4 = make_cuboid_flow_grad(4)
+        group = goos.GroupShape([
+            goos.GroupShape([shape1, shape2]), shape3,
+            goos.GroupShape([shape4])
+        ])
+
+        inputs = [
+            goos.ArrayFlow([flow1, flow2]), flow3,
+            goos.ArrayFlow([flow4])
+        ]
+        assert group.eval(inputs) == goos.ArrayFlow(
+            [flow2, flow4, flow3, flow1])
+        assert (group.grad(inputs,
+                           goos.ArrayFlow.Grad(
+                               [grad2, grad4, grad3, grad1])) == [
+                                   goos.ArrayFlow.Grad([grad1, grad2]), grad3,
+                                   goos.ArrayFlow.Grad([grad4])
+                               ])
