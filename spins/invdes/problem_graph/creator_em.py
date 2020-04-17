@@ -1,7 +1,10 @@
 from typing import Callable, List, Optional, Tuple, Union
 
 import numpy as np
+import os
 import scipy.sparse
+import scipy.io as sio
+from scipy.interpolate import RegularGridInterpolator
 
 from spins import fdfd_solvers
 from spins import fdfd_tools
@@ -525,6 +528,89 @@ class WaveguideModeOverlap:
             axis=gridlock.axisvec2axis(self._params.normal),
             polarity=gridlock.axisvec2polarity(self._params.normal),
             power=self._params.power)
+
+@optplan.register_node(optplan.ImportOverlap)
+class ImportOverlap:
+    def __init__(self,
+                 params: optplan.ImportOverlap,
+                 work: workspace.Workspace = None) -> None:
+        """Creates a new waveguide mode overlap.
+
+        Args:
+            params: Waveguide mode parameters.
+            work: Unused.
+        """
+        self._params = params
+
+    def __call__(self, simspace: SimulationSpace, wlen: float = None,
+                 **kwargs) -> fdfd_tools.VecField:
+        matpath = os.path.join(simspace._filepath, self._params.file_name)
+        overlap = sio.loadmat(matpath)
+
+        # Use reference_grid to get coords which the overlap fields are defined on.
+        reference_grid = simspace(wlen).eps_bg
+        overlap_grid = np.zeros(reference_grid.grids.shape,dtype=np.complex_)
+
+        xyz = reference_grid.xyz
+        dxyz = reference_grid.dxyz
+        shifts = reference_grid.shifts
+
+        overlap_comp = ["Ex", "Ey", "Ez"]
+        overlap_center = self._params.center
+        
+        overlap_coords = [
+            overlap["x"][0]+overlap_center[0],
+            overlap["y"][0]+overlap_center[1],
+            overlap["z"][0]+overlap_center[2]
+        ]
+
+        # The interpolation done below only works on three-dimensional grids with each dimension containing
+        # more than a single grid point (i.e. no two-dimensional grids). Therefore, if a dimension has a
+        # singleton grid point, we duplicate along that axis to create a pseudo-3D grid.
+        coord_dims = np.array([
+            overlap_coords[0].size, overlap_coords[1].size,
+            overlap_coords[2].size
+        ])
+        singleton_dims = np.where(coord_dims == 1)[0]
+        if not singleton_dims.size == 0:
+            for axis in singleton_dims:
+                # The dx from the SPINS simulation grid is borrowed for the replication.
+                dx = dxyz[axis][0]
+                coord = overlap_coords[axis][0]
+                overlap_coords[axis] = np.insert(overlap_coords[axis], 0,
+                                                 coord-dx/2)
+                overlap_coords[axis] = np.append(overlap_coords[axis], coord+dx/2)
+                # Repeat the overlap fields along the extended axis
+                for comp in overlap_comp:
+                    overlap[comp] = np.repeat(overlap[comp],
+                                              overlap_coords[axis].size,
+                                              axis)
+
+        for i in range(0, 3):
+
+            # Interpolate the user-specified overlap fields for use on the simulation grids
+            overlap_interp_function = RegularGridInterpolator(
+                (overlap_coords[0], overlap_coords[1], overlap_coords[2]),
+                overlap[overlap_comp[i]],
+                bounds_error=False,
+                fill_value=0.0)
+
+            # Grid coordinates for each component of Electric field. Shifts due to Yee lattice offsets.
+            # See documentation of ``Grid" class for more detailed explanation.
+            xs = xyz[0] + dxyz[0] * shifts[i, 0]
+            ys = xyz[1] + dxyz[1] * shifts[i, 1]
+            zs = xyz[2] + dxyz[2] * shifts[i, 2]
+
+            # Evaluate the interpolated overlap fields on simulationg rids
+            eval_coord_grid = np.meshgrid(xs, ys, zs, indexing='ij')
+            eval_coord_points = np.reshape(eval_coord_grid, (3, -1),
+                                           order='C').T
+            interp_overlap = overlap_interp_function(eval_coord_points)
+            overlap_grid[i] = np.reshape(interp_overlap,
+                                               (len(xs), len(ys), len(zs)),
+                                               order='C')
+        
+        return overlap_grid
 
 
 # TODO(logansu): This function appears just to be an inner product.
