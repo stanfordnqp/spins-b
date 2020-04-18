@@ -313,6 +313,7 @@ class WaveguideModeOverlap(optplan.EmOverlap):
     mode_num = types.IntType()
     power = types.FloatType()
 
+
 @optplan.register_node_type()
 class ImportOverlap(optplan.EmOverlap):
     """Represents a imported overlap vector.
@@ -325,6 +326,7 @@ class ImportOverlap(optplan.EmOverlap):
     type = schema_utils.polymorphic_model_type("overlap.import_field_vector")
     file_name = types.StringType()
     center = optplan.vec3d()
+
 
 @optplan.register_node_type()
 class PlaneWaveSource(optplan.EmSource):
@@ -365,6 +367,24 @@ class GaussianSource(optplan.EmSource):
     psi = types.FloatType()
     polarization_angle = types.FloatType()
     overwrite_bloch_vector = types.BooleanType()
+    power = types.FloatType()
+    normalize_by_sim = types.BooleanType(default=False)
+
+
+@optplan.register_node_type()
+class DipoleSource(optplan.EmSource):
+    """Represents a dipole source.
+
+    Attributes:
+        position: Position of the dipole (will snap to grid).
+        axis: Direction of the dipole (x:0, y:1, z:2).
+        phase: Phase of the dipole source (in radian).
+        power: Power assuming uniform dielectric space with the permittivity.
+    """
+    type = schema_utils.polymorphic_model_type("source.dipole_source")
+    position = optplan.vec3d()
+    axis = types.IntType()
+    phase = types.FloatType()
     power = types.FloatType()
     normalize_by_sim = types.BooleanType(default=False)
 
@@ -437,8 +457,8 @@ class FdfdSimulation(optplan.Function):
     epsilon = optplan.ReferenceType(optplan.Function)
     source = optplan.ReferenceType(optplan.EmSource)
     wavelength = types.FloatType()
-    solver = types.StringType(
-        choices=("maxwell_bicgstab", "maxwell_cg", "local_direct"))
+    solver = types.StringType(choices=("maxwell_bicgstab", "maxwell_cg",
+                                       "local_direct"))
     bloch_vector = types.ListType(types.FloatType())
 
 
