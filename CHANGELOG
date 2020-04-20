@@ -43,3 +43,7 @@ We will try to document all notable changes in this file.
 - (invdes) Discreteness penalty for direct parametrizations [@nvsapra]
 - (goos) Array slicing function [@vcruysse]
 - Dipole source [@vcruysse]
+
+## 2020-04-20
+### Added
+- (invdes) Custom overlap function [@nvsapra]
