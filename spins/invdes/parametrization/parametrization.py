@@ -18,7 +18,6 @@ class Parametrization(metaclass=abc.ABCMeta):
 
     All parametrizations should inherit from this class.
     """
-
     @abc.abstractmethod
     def get_structure(self) -> np.ndarray:
         """Produces the corresponding structure.
@@ -122,9 +121,9 @@ class DirectParam(Parametrization):
     A direct parametrization holds the z-value of each pixel.
     Projection is defined to keep the z-value between 0 and 1.
     """
-
-    def __init__(self, initial_value: np.ndarray,
-                 bounds: List[float] = (0, 1)) -> None:
+    def __init__(
+            self, initial_value: np.ndarray,
+            bounds: List[float] = (0, 1)) -> None:
         self.vector = np.array(initial_value).astype(float)
         if bounds:
             self.lower_bound = bounds[0]
@@ -135,13 +134,13 @@ class DirectParam(Parametrization):
 
         # Expand upper and lower bounds into arrays.
         if isinstance(self.lower_bound, numbers.Number):
-            self.lower_bound = (self.lower_bound,) * len(self.vector)
+            self.lower_bound = (self.lower_bound, ) * len(self.vector)
         if isinstance(self.upper_bound, numbers.Number):
-            self.upper_bound = (self.upper_bound,) * len(self.vector)
+            self.upper_bound = (self.upper_bound, ) * len(self.vector)
         if self.lower_bound is None:
-            self.lower_bound = (None,) * len(self.vector)
+            self.lower_bound = (None, ) * len(self.vector)
         if self.upper_bound is None:
-            self.upper_bound = (None,) * len(self.vector)
+            self.upper_bound = (None, ) * len(self.vector)
 
     def get_structure(self) -> np.ndarray:
         return self.vector
@@ -152,7 +151,9 @@ class DirectParam(Parametrization):
         lower_bound = [
             b if b is not None else -np.inf for b in self.lower_bound
         ]
-        upper_bound = [b if b is not None else np.inf for b in self.upper_bound]
+        upper_bound = [
+            b if b is not None else np.inf for b in self.upper_bound
+        ]
         self.vector = np.clip(self.vector, lower_bound, upper_bound)
 
     def get_bounds(self):
@@ -185,7 +186,6 @@ class CubicParam(Parametrization):
     lower_bound, upper_bound = lower and upper bound of the parametrization
     bounds = lower and upper bound of the parametrization
     """
-
     def __init__(self,
                  initial_value: np.ndarray,
                  coarse_x: np.ndarray,
@@ -210,7 +210,8 @@ class CubicParam(Parametrization):
 
         # correct the initial value
         if isinstance(initial_value, (float, int, complex)):
-            self.vector = initial_value * np.ones(self.geometry_matrix.shape[1])
+            self.vector = initial_value * np.ones(
+                self.geometry_matrix.shape[1])
         elif len(initial_value) == self.reverse_geometry_matrix.shape[0]:
             self.vector = initial_value
         elif len(initial_value) == self.reverse_geometry_matrix.shape[1]:
@@ -246,15 +247,15 @@ class CubicParam(Parametrization):
     def calculate_gradient(self) -> np.ndarray:
         z_cubic = self.vec2f @ self.vector
         if self.k:
-            return sparse.diags(2 * self.k * np.exp(-self.k * (2 * z_cubic - 1)) /
-                                   (1 + np.exp(-self.k *
-                                       (2 * z_cubic - 1)))**2) @ self.vec2f
+            return sparse.diags(
+                2 * self.k * np.exp(-self.k * (2 * z_cubic - 1)) /
+                (1 + np.exp(-self.k * (2 * z_cubic - 1)))**2) @ self.vec2f
         else:
             return self.vec2f
 
     def get_bounds(self):
         vec_len = len(self.vector)
-        return ((self.lower_bound,) * vec_len, (self.upper_bound,) * vec_len)
+        return ((self.lower_bound, ) * vec_len, (self.upper_bound, ) * vec_len)
 
     def project(self) -> None:
         self.vector = np.clip(self.vector, self.lower_bound, self.upper_bound)
@@ -285,11 +286,11 @@ class CubicParam(Parametrization):
         obj = OptimizationProblem(obj)
 
         # optimize continuous
-        opt_cont = optim.ScipyOptimizer(
-            method='L-BFGS-B', options={
-                'maxiter': 200,
-                'maxcor': 10
-            })
+        opt_cont = optim.ScipyOptimizer(method='L-BFGS-B',
+                                        options={
+                                            'maxiter': 200,
+                                            'maxcor': 10
+                                        })
         iter_num = 0
 
         def callback(_):
@@ -297,6 +298,35 @@ class CubicParam(Parametrization):
             iter_num += 1
 
         opt_cont(obj, self, callback=callback)
+
+    # Functions to generate gds
+    def generate_polygons(self, dx: float):
+        '''
+            Generate a list of polygons
+
+            input:
+                dx: grid spacing
+            output:
+                list of the polygons
+        '''
+        x_z = self.x_z * dx
+        y_z = self.y_z * dx
+        design_area_fine = np.array([len(x_z), len(y_z)])
+        phi = self.vec2f @ self.vector
+        phi_mat = phi.reshape(design_area_fine, order='F')
+
+        # Pad the design region with zeros to ensure outer boundary is drawn.
+        phi_extended = np.zeros(design_area_fine + 2)
+        phi_extended[1:-1, 1:-1] = phi_mat
+
+        x_extended = np.r_[x_z[0] - dx, x_z, x_z[-1] + dx]
+        y_extended = np.r_[y_z[0] - dx, y_z, y_z[-1] + dx]
+
+        import matplotlib.pyplot as plt
+        cs = plt.contour(x_extended, y_extended, phi_extended - 0.5, [0])
+        paths = cs.collections[0].get_paths()
+
+        return [p.to_polygons()[0] for p in paths]
 
 
 class HermiteParam(Parametrization):
@@ -319,7 +349,6 @@ class HermiteParam(Parametrization):
     bounds = lower and upper bound of the parametrization
     scale = scaling factor for the derivatives
     """
-
     def __init__(self,
                  initial_value: np.ndarray,
                  coarse_x: np.ndarray,
@@ -341,8 +370,9 @@ class HermiteParam(Parametrization):
         self.k = 4  # factor in the exponential in the sigmoid function used to discretize
         self.scale_deriv = scale
 
-        self.fine_x_grid, self.fine_y_grid = np.meshgrid(
-            fine_x, fine_y, indexing='ij')
+        self.fine_x_grid, self.fine_y_grid = np.meshgrid(fine_x,
+                                                         fine_y,
+                                                         indexing='ij')
 
         self.geometry_matrix, self.reverse_geometry_matrix = cubic_utils.make_geometry_matrix_hermite(
             (len(coarse_x), len(coarse_y)), symmetry, periodicity, periods)
@@ -358,7 +388,8 @@ class HermiteParam(Parametrization):
 
         # correct the initial value
         if isinstance(initial_value, (float, int, complex)):
-            self.vector = initial_value * np.ones(self.geometry_matrix.shape[1])
+            self.vector = initial_value * np.ones(
+                self.geometry_matrix.shape[1])
         elif len(initial_value) == self.geometry_matrix.shape[1]:
             self.vector = initial_value
         elif len(initial_value) == self.geometry_matrix.shape[0]:
@@ -450,11 +481,11 @@ class HermiteParam(Parametrization):
         obj = OptimizationProblem(obj)
 
         # optimize continuous
-        opt_cont = optim.ScipyOptimizer(
-            method='L-BFGS-B', options={
-                'maxiter': 200,
-                'maxcor': 10
-            })
+        opt_cont = optim.ScipyOptimizer(method='L-BFGS-B',
+                                        options={
+                                            'maxiter': 200,
+                                            'maxcor': 10
+                                        })
         iter_num = 0
 
         def callback(v):
