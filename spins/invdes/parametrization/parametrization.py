@@ -123,8 +123,9 @@ class DirectParam(Parametrization):
     Projection is defined to keep the z-value between 0 and 1.
     """
 
-    def __init__(self, initial_value: np.ndarray,
-                 bounds: List[float] = (0, 1)) -> None:
+    def __init__(
+            self, initial_value: np.ndarray,
+            bounds: List[float] = (0, 1)) -> None:
         self.vector = np.array(initial_value).astype(float)
         if bounds:
             self.lower_bound = bounds[0]
@@ -246,9 +247,10 @@ class CubicParam(Parametrization):
     def calculate_gradient(self) -> np.ndarray:
         z_cubic = self.vec2f @ self.vector
         if self.k:
-            return sparse.diags(2 * self.k * np.exp(-self.k * (2 * z_cubic - 1)) /
-                                   (1 + np.exp(-self.k *
-                                       (2 * z_cubic - 1)))**2) @ self.vec2f
+            return sparse.diags(2 * self.k * np.exp(-self.k *
+                                                    (2 * z_cubic - 1)) /
+                                (1 + np.exp(-self.k *
+                                            (2 * z_cubic - 1)))**2) @ self.vec2f
         else:
             return self.vec2f
 
@@ -285,11 +287,11 @@ class CubicParam(Parametrization):
         obj = OptimizationProblem(obj)
 
         # optimize continuous
-        opt_cont = optim.ScipyOptimizer(
-            method='L-BFGS-B', options={
-                'maxiter': 200,
-                'maxcor': 10
-            })
+        opt_cont = optim.ScipyOptimizer(method='L-BFGS-B',
+                                        options={
+                                            'maxiter': 200,
+                                            'maxcor': 10
+                                        })
         iter_num = 0
 
         def callback(_):
@@ -297,6 +299,27 @@ class CubicParam(Parametrization):
             iter_num += 1
 
         opt_cont(obj, self, callback=callback)
+
+    # Functions to generate gds
+    def generate_polygons(self, dx: float):
+        '''
+            Generate a list of polygons
+
+            input:
+                dx: grid spacing
+            output:
+                list of the polygons
+        '''
+        x_z = self.x_z * dx
+        y_z = self.y_z * dx
+        design_area_fine = np.array([len(x_z), len(y_z)])
+        phi = self.vec2f @ self.vector
+        phi_mat = phi.reshape(design_area_fine, order='F')
+
+        cs = plt.contour(x_z, y_z, phi - 0.5, [0])
+        paths = cs.collections[0].get_paths()
+
+        return [p.to_polygons()[0] for p in paths]
 
 
 class HermiteParam(Parametrization):
@@ -341,8 +364,9 @@ class HermiteParam(Parametrization):
         self.k = 4  # factor in the exponential in the sigmoid function used to discretize
         self.scale_deriv = scale
 
-        self.fine_x_grid, self.fine_y_grid = np.meshgrid(
-            fine_x, fine_y, indexing='ij')
+        self.fine_x_grid, self.fine_y_grid = np.meshgrid(fine_x,
+                                                         fine_y,
+                                                         indexing='ij')
 
         self.geometry_matrix, self.reverse_geometry_matrix = cubic_utils.make_geometry_matrix_hermite(
             (len(coarse_x), len(coarse_y)), symmetry, periodicity, periods)
@@ -450,11 +474,11 @@ class HermiteParam(Parametrization):
         obj = OptimizationProblem(obj)
 
         # optimize continuous
-        opt_cont = optim.ScipyOptimizer(
-            method='L-BFGS-B', options={
-                'maxiter': 200,
-                'maxcor': 10
-            })
+        opt_cont = optim.ScipyOptimizer(method='L-BFGS-B',
+                                        options={
+                                            'maxiter': 200,
+                                            'maxcor': 10
+                                        })
         iter_num = 0
 
         def callback(v):
