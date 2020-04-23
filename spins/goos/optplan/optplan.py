@@ -133,6 +133,10 @@ class ProblemGraphNodeMeta(type):
         else:
             obj._goos_schema.name = obj._goos_name
         # TODO(logansu): Validate the schema.
+
+        default_plan = get_default_plan()
+        if default_plan:
+            default_plan.add_node(obj)
         return obj
 
 
@@ -235,13 +239,16 @@ class OptimizationPlan:
 
     def __init__(self,
                  root_path: str = ".",
-                 save_path: Optional[str] = None) -> None:
+                 save_path: Optional[str] = None,
+                 autorun: bool = False) -> None:
         """Creates a new optimization plan.
 
         Args:
             root_path: Path relative to which any files will be loaded.
             save_path: Path for saving any data. If `None`, logging data will
                 not be saved.
+            autorun: If `True`, the optimization plan will run immediately
+                when an action is added.
         """
         # Flag indicating whether the optimization plan state can be modified.
         # This flag is enabled only if `run` is being called, thus enabling
@@ -249,6 +256,7 @@ class OptimizationPlan:
         self._modifiable = False
 
         self._root_path = root_path
+        self._autorun = autorun
 
         # Handle logging.
         self._save_path = save_path
@@ -463,7 +471,10 @@ class OptimizationPlan:
         for dep_node in action._goos_inputs:
             self.add_node(dep_node)
 
-        # TODO(logansu): Refactor into a single variable state dataclass.
+        if self._autorun:
+            self.run()
+
+    # TODO(logansu): Refactor into a single variable state dataclass.
     def add_node(self, node: ProblemGraphNode):
         if node._goos_name in self._node_map:
             return
@@ -642,4 +653,6 @@ def pop_plan() -> OptimizationPlan:
 
 
 def get_default_plan() -> OptimizationPlan:
-    return optplan.GLOBAL_PLAN_STACK[-1]
+    if optplan.GLOBAL_PLAN_STACK:
+        return optplan.GLOBAL_PLAN_STACK[-1]
+    return None
