@@ -43,3 +43,12 @@ We will try to document all notable changes in this file.
 - (invdes) Discreteness penalty for direct parametrizations [@nvsapra]
 - (goos) Array slicing function [@vcruysse]
 - Dipole source [@vcruysse]
+
+## 2020-04-23
+### Added
+- (goos) Add ability to resume plan [@ludi1001]
+- (goos) Add autorun feature to optimization plan [@ludi1001]
+- (invdes) CubicParam generates GDS [@ludi1001]
+
+### Changed
+- (goos) Nodes are added immediately to plan upon creation [@ludi1001]
