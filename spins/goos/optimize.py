@@ -1,5 +1,7 @@
 from typing import Dict, List
 
+import copy
+
 import numpy as np
 import scipy.optimize
 
@@ -74,7 +76,7 @@ class ScipyOptimizer(goos.Action):
                 "maxls": maxls,
             })
 
-    def run(self, plan: goos.OptimizationPlan):
+    def run(self, plan: goos.OptimizationPlan, start_iter: int = 0):
         variables = plan.get_thawed_vars()
 
         var_shapes = []
@@ -215,7 +217,7 @@ class ScipyOptimizer(goos.Action):
                 "ignored: %d" % (len(self._cons_ineq) + len(self._cons_eq)))
 
         # Keep track of iteration number.
-        iter_num = 0
+        iter_num = start_iter
 
         def callback(x):
             # Update the variable values before evaluating monitors.
@@ -234,6 +236,11 @@ class ScipyOptimizer(goos.Action):
                 "iteration": iter_num
             }, self._monitor_list)
 
+        # Adjust total number of iterations if we are resuming.
+        options = copy.deepcopy(self._options)
+        if "maxiter" in options:
+            options["maxiter"] -= start_iter
+
         initial_val = np.hstack(initial_val)
         self._results = scipy.optimize.minimize(func,
                                                 initial_val,
@@ -242,8 +249,11 @@ class ScipyOptimizer(goos.Action):
                                                 callback=callback,
                                                 bounds=bounds,
                                                 constraints=constraints,
-                                                **self._options)
+                                                **options)
         unpack_and_set(self._results["x"])
+
+    def resume(self, plan: goos.OptimizationPlan, event: Dict) -> None:
+        self.run(plan, start_iter=event["iteration"])
 
 
 def scipy_minimize(objective: goos.Function, *args, **kwargs) -> ScipyOptimizer:

@@ -90,6 +90,9 @@ class ArrayFlow(flows.Flow):
     def __eq__(self, value) -> bool:
         return self._flows == value._flows
 
+    def __repr__(self):
+        return "ArrayFlow({})".format(self._flows)
+
 
 class ArrayFlowOpMixin:
     """Indicates that an operation that produces an array flow.

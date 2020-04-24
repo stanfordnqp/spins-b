@@ -109,3 +109,36 @@ def test_optimize_ineq_constraints_arr():
         plan.run()
 
         np.testing.assert_allclose(x.get().array, [2, 1])
+
+
+def test_optimize_resume(tmp_path):
+    plan_dir = tmp_path / "test_plan"
+    plan_dir.mkdir()
+    with goos.OptimizationPlan(autorun=True, save_path=plan_dir) as plan:
+        x = goos.Variable([1], name="x")
+        y = goos.Variable([1], name="y")
+
+        y.freeze()
+        obj = (x + y)**4 + 3
+        goos.opt.scipy_minimize(obj, method="L-BFGS-B", max_iters=10)
+
+        y.thaw()
+        y.set(5)
+
+        x_final = x.get()
+        plan.save(plan_dir)
+
+    with goos.OptimizationPlan() as plan:
+        plan.load(plan_dir)
+
+        x = plan.get_node("x")
+        y = plan.get_node("y")
+
+        plan.read_checkpoint(plan_dir / "step5.pkl")
+
+        assert x.get() != x_final
+        assert y.get() != 5
+
+        plan.resume()
+
+        assert y.get() == 5

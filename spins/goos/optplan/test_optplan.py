@@ -225,3 +225,10 @@ def test_flag_eval(temp_context):
                     frozen_flags=goos.NumericFlow.ConstFlags(True),
                 ),
             ])).get()
+
+
+def test_plan_autorun():
+    with goos.OptimizationPlan(autorun=True) as plan:
+        x = goos.Variable(3)
+        x.set(4)
+        assert x.get() == 4
