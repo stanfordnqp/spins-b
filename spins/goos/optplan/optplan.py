@@ -269,6 +269,8 @@ class OptimizationPlan:
         self._actions = []
         # Index of next action to take.
         self._action_ptr = 0
+        # Used to store current event data for resuming.
+        self._action_data = None
 
         # TODO(logansu): Refactor into a single variable state dataclass.
         # Map from variable name to current state.
@@ -402,6 +404,7 @@ class OptimizationPlan:
             "monitor_data": monitor_data,
             "log_counter": self._log_counter,
         })
+        self._action_data = event
 
         # Print out scalar monitor data.
         for mon_name, mon_val in monitor_data.items():
@@ -458,6 +461,7 @@ class OptimizationPlan:
             data = pickle.load(handle)
 
         self._action_ptr = data["action_ptr"]
+        self._action_data = data.get("event", None)
 
         # Unpack variables.
         for var_name, var_data in data["variable_data"].items():
@@ -544,7 +548,7 @@ class OptimizationPlan:
             if not self._var_frozen[var_name]
         ]
 
-    def run(self, auto_checkpoint: bool = True):
+    def run(self, auto_checkpoint: bool = True) -> None:
         """Runs the optimization plan.
 
         Args:
@@ -564,7 +568,63 @@ class OptimizationPlan:
                                  "action{}.chkpt".format(self._action_ptr)))
 
             self._action_ptr += 1
+            self._action_data = None
         self._modifiable = False
+
+    def resume(self,
+               checkpoint: str = None,
+               auto_checkpoint: bool = True) -> None:
+        """Resumes the optimization.
+
+        This function will resume an optimization. It is assumed that the
+        optimization plan from before has already been loaded using `load`.
+        The function will resume executation based on the state in the
+        last loaded checkpoint file (a call to `read_checkpoint`). Optionally,
+        `read_checkpoint` will be called before resuming if the `checkpoint`
+        parameter is specified.
+
+        Actions must know how to handle a resume by implementing a `resume`
+        function. Actions that do not implement such a function will simply
+        be executed from the checkpoint file state.
+
+        Args:
+            checkpoint: Checkpoint file to load before resuming.
+            auto_checkpoint: If `True`, checkpoint files are automatically
+                generated. Checkpoints will only be created if a save path
+                is specified.
+        """
+        if checkpoint:
+            self.read_checkpoint(checkpoint)
+
+        self._modifiable = True
+
+        # Attempt to resume if there is event data to resume from.
+        if self._action_data:
+            self.logger.info("Resuming action {} ({}).".format(
+                self._action_ptr, self._actions[self._action_ptr]._goos_name))
+
+            if hasattr(self._actions[self._action_ptr], "resume"):
+                self._actions[self._action_ptr].resume(self, self._action_data)
+            else:
+                self.logger.warning(
+                    "Action has no resume capabilities {}, re-running.".format(
+                        self._action_ptr))
+                self._actions[self._action_ptr].run(self)
+        else:
+            self.logger.info("Running action {} ({}).".format(
+                self._action_ptr, self._actions[self._action_ptr]._goos_name))
+            self._actions[self._action_ptr].run(self)
+
+        if auto_checkpoint and self._save_path:
+            self.write_checkpoint(
+                os.path.join(self._save_path,
+                             "action{}.chkpt".format(self._action_ptr)))
+
+        self._action_ptr += 1
+        self._action_data = None
+        self._modifiable = False
+
+        self.run()
 
     def eval_nodes(self, nodes: List[ProblemGraphNode]) -> List[flows.Flow]:
         """Evaluates nodes.
