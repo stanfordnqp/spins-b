@@ -9,7 +9,8 @@ GEOM_REGISTRY = schema_registry.SchemaRegistryStack()
 def register(schema, **kwargs):
 
     def wrapper(cls):
-        if issubclass(schema, goos.Flow):
+        from spins.goos import flows
+        if issubclass(schema, flows.Flow):
             name = schema.__name__
             registry = GEOM_REGISTRY
         else:

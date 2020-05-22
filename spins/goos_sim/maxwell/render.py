@@ -1,11 +1,21 @@
-from typing import List
+from typing import List, Union
+
+import dataclasses
 
 import numpy as np
+import scipy.sparse
 
 from spins import goos
 from spins.goos import flows
+from spins.goos_sim import maxwell
 from spins.goos_sim.maxwell import simspace
 from spins import gridlock
+
+
+@dataclasses.dataclass
+class RenderParams:
+    wlen: float
+    pts_per_arclen: float
 
 
 class RenderShape(goos.Function):
@@ -33,13 +43,21 @@ class RenderShape(goos.Function):
                                    ext_dir=gridlock.Direction.z,
                                    initial=bg_eps,
                                    num_grids=3)
-        self._wlen = wavelength
-        self._pts_per_arclen = num_points_per_arclen
+
+        self._render_params = RenderParams(wlen=wavelength,
+                                           pts_per_arclen=num_points_per_arclen)
 
     def eval(self, inputs: List[goos.ShapeFlow]) -> flows.NumericFlow:
         self._grid.clear()
-        extra_grids = self._render(self._grid, inputs[0])
+        # Save geometry for backprop.
+        self._geom = _create_geometry(inputs[0])
+        extra_grids = self._geom.eval(self._grid, self._render_params)
         self._grid.render()
+
+        if extra_grids is None:
+            extra_grids = []
+        elif not isinstance(extra_grids, list):
+            extra_grids = [extra_grids]
 
         grids = self._grid.grids
         for grid in extra_grids:
@@ -53,71 +71,76 @@ class RenderShape(goos.Function):
         self._grid.clear()
         self._grid.grids = grad_val.array_grad
 
-        return [_grad(self._grid, input_vals[0], self._wlen)]
-
-    def _render(self, grid, shape) -> List[gridlock.Grid]:
-        extra_grids = []
-        # TODO(logansu): Warn about rotation.
-        #if not np.array_equal(shape.rot, [0, 0, 0]):
-        #    raise NotImplemented("Render cannot handle objects with rotation.")
-
-        if isinstance(shape, goos.CuboidFlow):
-            if np.all(shape.extents != 0):
-                grid.draw_cuboid(shape.pos, shape.extents,
-                                 shape.material.permittivity(self._wlen))
-        elif isinstance(shape, goos.CylinderFlow):
-            radius = shape.radius.item()
-            num_points = int(np.ceil(self._pts_per_arclen * 2 * np.pi * radius))
-            grid.draw_cylinder(shape.pos, radius, shape.height.item(),
-                               num_points,
-                               shape.material.permittivity(self._wlen))
-        elif isinstance(shape, goos.ArrayFlow):
-            for s in shape:
-                extra_grids += self._render(grid, s)
-        elif isinstance(shape, goos.PixelatedContShapeFlow):
-            # Draw a cuboid in the original grid to overwrite any shapes in the
-            # shape region, but draw the continuous permittivity on an extra
-            # grid.
-            grid.draw_cuboid(shape.pos, shape.extents,
-                             shape.material.permittivity(self._wlen))
-            new_grid = gridlock.Grid(grid.exyz,
-                                     ext_dir=grid.ext_dir,
-                                     initial=0,
-                                     num_grids=3)
-            contrast = shape.material2.permittivity(
-                self._wlen) - shape.material.permittivity(self._wlen)
-            shape_coords = shape.get_edge_coords()
-            for axis in range(3):
-                grid_coords = new_grid.shifted_exyz(
-                    axis, which_grid=gridlock.GridType.COMP)
-                # Remove ghost cells at the end.
-                grid_coords = [
-                    c if c.shape == co.shape else c[:-1]
-                    for c, co in zip(grid_coords, grid.exyz)
-                ]
-                mat = get_rendering_matrix(shape_coords, grid_coords)
-                grid_vals = contrast * mat @ shape.array.flatten()
-                new_grid.grids[axis] = np.reshape(grid_vals,
-                                                  new_grid.grids[axis].shape)
-            extra_grids.append(new_grid)
-        else:
-            raise ValueError("Encountered unrenderable type, got {}".format(
-                type(shape)))
-        return extra_grids
+        return [self._geom.grad(self._grid, self._render_params)]
 
 
-def _grad(grid, shape, wlen) -> goos.ShapeFlow.Grad:
-    if isinstance(shape, goos.CuboidFlow):
-        return None
-    elif isinstance(shape, goos.CylinderFlow):
-        return None
-    elif isinstance(shape, goos.ArrayFlow):
-        return goos.ArrayFlow.Grad([_grad(grid, s, wlen) for s in shape])
-    elif isinstance(shape, goos.PixelatedContShapeFlow):
-        contrast = shape.material2.permittivity(
-            wlen) - shape.material.permittivity(wlen)
-        shape_coords = shape.get_edge_coords()
-        grad = np.zeros_like(shape.array)
+class GeometryImpl:
+
+    def __init__(self, shape):
+        self.shape = shape
+
+    def eval(self, grid: gridlock.Grid, params: RenderParams):
+        pass
+
+    def grad(self, grid: gridlock.Grid, params: RenderParams):
+        pass
+
+
+@maxwell.register(goos.CuboidFlow)
+class CuboidFlowImpl(GeometryImpl):
+
+    def eval(self, grid: gridlock.Grid, params: RenderParams):
+        if np.all(self.shape.extents != 0):
+            grid.draw_cuboid(self.shape.pos, self.shape.extents,
+                             self.shape.material.permittivity(params.wlen))
+
+
+@maxwell.register(goos.CylinderFlow)
+class CylinderFlowImpl(GeometryImpl):
+
+    def eval(self, grid: gridlock.Grid, params: RenderParams):
+        radius = self.shape.radius.item()
+        num_points = int(np.ceil(params.pts_per_arclen * 2 * np.pi * radius))
+        grid.draw_cylinder(self.shape.pos, radius, self.shape.height.item(),
+                           num_points,
+                           self.shape.material.permittivity(params.wlen))
+
+
+@maxwell.register(goos.PixelatedContShapeFlow)
+class PixelatedContShapeFlowImpl(GeometryImpl):
+
+    def eval(self, grid: gridlock.Grid, params: RenderParams):
+        # Draw a cuboid in the original grid to overwrite any shapes in the
+        # shape region, but draw the continuous permittivity on an extra
+        # grid.
+        grid.draw_cuboid(self.shape.pos, self.shape.extents,
+                         self.shape.material.permittivity(params.wlen))
+        new_grid = gridlock.Grid(grid.exyz,
+                                 ext_dir=grid.ext_dir,
+                                 initial=0,
+                                 num_grids=3)
+        contrast = self.shape.material2.permittivity(
+            params.wlen) - self.shape.material.permittivity(params.wlen)
+        shape_coords = self.shape.get_edge_coords()
+        for axis in range(3):
+            grid_coords = new_grid.shifted_exyz(
+                axis, which_grid=gridlock.GridType.COMP)
+            # Remove ghost cells at the end.
+            grid_coords = [
+                c if c.shape == co.shape else c[:-1]
+                for c, co in zip(grid_coords, grid.exyz)
+            ]
+            mat = get_rendering_matrix(shape_coords, grid_coords)
+            grid_vals = contrast * mat @ self.shape.array.flatten()
+            new_grid.grids[axis] = np.reshape(grid_vals,
+                                              new_grid.grids[axis].shape)
+        return new_grid
+
+    def grad(self, grid: gridlock.Grid, params: RenderParams):
+        contrast = self.shape.material2.permittivity(
+            params.wlen) - self.shape.material.permittivity(params.wlen)
+        shape_coords = self.shape.get_edge_coords()
+        grad = np.zeros_like(self.shape.array)
         for axis in range(3):
             grid_coords = grid.shifted_exyz(axis,
                                             which_grid=gridlock.GridType.COMP)
@@ -128,17 +151,40 @@ def _grad(grid, shape, wlen) -> goos.ShapeFlow.Grad:
             ]
             mat = get_rendering_matrix(shape_coords, grid_coords)
             grid_vals = contrast * mat.T @ grid.grids[axis].flatten()
-            grad += np.real(np.reshape(grid_vals, shape.array.shape))
+            grad += np.real(np.reshape(grid_vals, self.shape.array.shape))
             # TODO(logansu): Fix complex gradient.
             if np.iscomplexobj(grid_vals):
                 grad *= 2
+
         return goos.PixelatedContShapeFlow.Grad(array_grad=grad)
-    else:
-        raise ValueError("Encountered unrenderable type, got {}".format(
-            type(shape)))
 
 
-import scipy.sparse
+@maxwell.register(goos.ArrayFlow)
+class ArrayFlowImpl(GeometryImpl):
+
+    def __init__(self, flow: goos.ArrayFlow):
+        self._shapes = [_create_geometry(f) for f in flow]
+
+    def eval(self, grid: gridlock.Grid, params: RenderParams):
+        extra_grids = []
+        for s in self._shapes:
+            extra_grid = s.eval(grid, params)
+            if extra_grid:
+                extra_grids.append(extra_grid)
+        return extra_grids
+
+    def grad(self, grid: gridlock.Grid, params: RenderParams):
+        return goos.ArrayFlow.Grad([s.grad(grid, params) for s in self._shapes])
+
+
+def _create_geometry(shape: Union[goos.ArrayFlow, goos.Shape]) -> GeometryImpl:
+    for flow_name, flow_entry in reversed(
+            maxwell.GEOM_REGISTRY.get_map().items()):
+        if isinstance(shape, flow_entry.schema):
+            return flow_entry.creator(shape)
+
+    raise ValueError("Encountered unrenderable type, got {}.".format(
+        type(shape)))
 
 
 def get_rendering_matrix(shape_edge_coords, grid_edge_coords):
