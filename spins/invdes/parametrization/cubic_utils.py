@@ -39,14 +39,23 @@ def CubicMatrices(x_vector: np.array,
         raise ValueError(
             'The fine grid has to be smaller or equal to the rough grid')
 
-    # Make the X, Y grid.
-    (x_grid, y_grid) = np.meshgrid(x_vector, y_vector, indexing='ij')
-
     # Make the matrix containing the offset information of x and y to xq and yq.
-    (x_rem, _, dx_rem) = floor2vector_rem(x_grid, xq_vector)
-    (y_rem, _, dy_rem) = floor2vector_rem(y_grid, yq_vector)
-    #( XY_diag, XYx_diag, XYy_diag ) = MakeXYcubic( xnorm_rem, ynorm_rem)
-    (xy_diag, xy_x_diag, xy_y_diag) = MakeXYcubic(x_rem, y_rem)
+    x_rem, dx_rem = floor2vector_rem(x_vector, xq_vector)
+    y_rem, dy_rem = floor2vector_rem(y_vector, yq_vector)
+
+    x_rem, y_rem = np.meshgrid(x_rem, y_rem, indexing="ij")
+    dx_rem, dy_rem = np.meshgrid(dx_rem, dy_rem, indexing="ij")
+
+    x_rem = x_rem.flatten(order="F")
+    y_rem = y_rem.flatten(order="F")
+    dx_rem = dx_rem.flatten(order="F")
+    dy_rem = dy_rem.flatten(order="F")
+
+
+    # Make the X, Y grid.
+    x_grid, y_grid = np.meshgrid(x_vector, y_vector, indexing="ij")
+
+    xy_diag, xy_x_diag, xy_y_diag = MakeXYcubic(x_rem, y_rem)
     dxdy_inv = MakeDXDY_inv(dx_rem, dy_rem)
     dxdy_corr_inv = MakeDXDYcorr_inv(dx_rem, dy_rem)
 
@@ -68,77 +77,61 @@ def CubicMatrices(x_vector: np.array,
 
 # Support functions
 ####################
-def floor2vector(x_vector: np.array, x_v: np.array) -> (np.array, np.array):
-    '''
-      floor2vector gives the largest x_v value for every value in x_vector that is not
-      larger than x_v. (needed for the cubic iterpolation)
+def floor2vector(arr: np.array,
+                 bins: np.array) -> Tuple[np.ndarray, np.ndarray]:
+    """Finds the element closest to `bins`.
 
-      Args:
-        x_vector: x values in the 2d fine grid f
-        x_v: x values in the 2d coarse grid
+    `arr` is flattened first.
 
-      return:
-        xf_vec: nearest x_v values at every position in x_vector
-        indf_vec: index of the nearest x_v values.
-    '''
+    Args:
+        arr: Array of elements to bin.
+        bins: List of bin coordinates.
 
-    # Get the matrix size.
-    x_vector_size = np.size(x_vector)
+    Returns:
+        A tuple `(arr_nearest, indices)` where `arr_nearest[i]` is an element of
+        `bins` that is the largest element no greater than `arr[i]`.
+        `indices[i]` corresponds to the index of the bin.
+    """
+    arr = arr.flatten(order="F")
 
-    # X as vector.
-    x_vec = np.reshape(x_vector, x_vector_size, order="F")
+    indices = np.digitize(arr, bins)
+    indices[indices >= len(bins)] = len(bins) - 1
 
-    # Xf_vec.
-    xf_vec = np.zeros(x_vector_size)
-    indf_vec = np.zeros(x_vector_size)
-    for i in range(0, x_vector_size):
-        test = x_vec[i] - x_v
-        i_near = [i for (i, val) in enumerate(test) if val < 0]
-        if np.size(i_near) < 1:
-            i_near = [np.size(x_v) - 1]
-        xf_vec[i] = x_v[i_near[0] - 1]
-        indf_vec[i] = i_near[0] - 1
+    arr_nearest = np.zeros_like(arr, dtype=float)
+    for i in range(len(arr)):
+        arr_nearest[i] = bins[indices[i] - 1]
 
-    return (xf_vec, indf_vec)
+    return arr_nearest, indices - 1
 
 
-def floor2vector_rem(x_vector: np.array,
-                     x_v: np.array) -> (np.array, np.array, np.array):
-    '''
-      floor2vector_rem gives the distance to the largest x_v value in x_vector that is not
-      larger than x_v for every value in x_vector. (needed for the cubic iterpolation)
+def floor2vector_rem(arr: np.array,
+                     bins: np.array) -> Tuple[np.ndarray, np.ndarray]:
+    """Finds the remainder of the element closest to `bins`.
 
-      Args:
-        x_vector: x values in the 2d fine grid f.
-        x_v: x values in the 2d coarse grid.
+    `arr` is flattened first.
 
-      return:
-        x: Difference between x_vector and its nearest x_v values.
-        xnorm: x Divided by x_diff.
-        diff_x: Difference between the2 nearest x_v values.
-    '''
+    Args:
+        arr: Array of elements to bin.
+        bins: List of bin coordinates.
 
-    # Get the matrix size.
-    x_vector_size = np.size(x_vector)
+    Returns:
+        A tuple `(rem, cell_diff)` where `rem[i]` is the difference between
+        `arr[i]` and the largest element in `bins` that is no greater than
+        `arr[i]`. `cell_diff` is the difference between adjacent elements
+        in `bins[i]` corresponding to the bin that `arr[i]` is in.
+    """
+    arr = arr.flatten(order="F")
 
-    # X as vector.
-    x_vec = np.reshape(x_vector, x_vector_size, order="F")
+    indices = np.digitize(arr, bins)
+    indices[indices >= len(bins)] = len(bins) - 1
 
-    # Xf_vec.
-    x = np.zeros(x_vector_size)
-    diff_x = np.zeros(x_vector_size)
-    xnorm = np.zeros(x_vector_size)
-    for i in range(0, x_vector_size):
-        test = x_vec[i] - x_v
-        i_near = [i for (i, val) in enumerate(test) if val < 0]
-        if np.size(i_near) < 1:
-            i_near = [np.size(x_v) - 1]
-        xf = x_v[i_near[0] - 1]
-        x[i] = x_vec[i] - xf
-        diff_x[i] = (x_v[i_near[0]] - x_v[i_near[0] - 1])
-        xnorm[i] = x[i] / diff_x[i]
+    rem = np.zeros_like(arr, dtype=float)
+    cell_diff = np.zeros_like(arr, dtype=float)
+    for i in range(len(arr)):
+        rem[i] = arr[i] - bins[indices[i] - 1]
+        cell_diff[i] = bins[indices[i]] - bins[indices[i] - 1]
 
-    return x, xnorm, diff_x
+    return rem, cell_diff
 
 
 def MakeXYcubic(x_vector: np.array, y_vector: np.array) -> (sparse.coo.coo_matrix, \
@@ -354,14 +347,12 @@ def MakeXYcubic_secondDerivative(
 
 
 def MakeAcubic(n_p: float) -> sparse.coo.coo_matrix:
-    '''
+    """
       MakeAcubic is a function needed to make the cubic interpolation matices.
       The interpolation matrix is a multiplication of the a-matrix and the
       position matrix based on the offset of the points to the rough grid.
       MakeAcubic calculated the A matrix
-      note: the output is coo_matrix, this will still need to converted to a
-      row or column sparse matrix.
-    '''
+    """
 
     # A matrix for a single point (wikipedia: cubic interpolation).
     a_single = np.array([ \
@@ -383,24 +374,9 @@ def MakeAcubic(n_p: float) -> sparse.coo.coo_matrix:
                  [4, -4, -4, 4, 2, 2, -2, -2, 2, -2, 2, -2, 1, 1, 1, 1]\
                      ])
 
-    # Prepare the coordinates and values of the sparse matrices.
-    # Every element of the A_single matrix has to become a diagonal matrix with
-    # as size the amount of points.
-    values_empty = np.ones([n_p, 1])
-    diag_indices = np.asarray(range(0, n_p))
-    ind_i = []
-    ind_j = []
-    values = []
-
-    for i in range(0, np.shape(a_single)[0]):
-        for j in range(0, np.shape(a_single)[1]):
-            if a_single[i, j] != 0:
-                ind_i = np.append(ind_i, diag_indices + i * n_p)
-                ind_j = np.append(ind_j, diag_indices + j * n_p)
-                values = np.append(values, a_single[i, j] * values_empty)
-
-    # Make sparse matrix.
-    return sp.sparse.csc_matrix((values, (ind_i, ind_j)), [16 * n_p, 16 * n_p])
+    a_single = sp.sparse.csc_matrix(a_single)
+    return sp.sparse.kron(
+        a_single, sp.sparse.identity(n_p, format="csc"), format="csc")
 
 
 def Phi2fii(
@@ -434,8 +410,12 @@ def Phi2fii(
                                shape_z, order="F")
 
     # Find the fii(phi) index for ever x y index.
-    (_, indfx) = floor2vector(x_grid, xq_vector)
-    (_, indfy) = floor2vector(y_grid, yq_vector)
+    _, indfx = floor2vector(x_vector, xq_vector)
+    _, indfy = floor2vector(y_vector, yq_vector)
+    indfx, indfy = np.meshgrid(indfx, indfy)
+    indfx = indfx.flatten(order="F")
+    indfy = indfy.flatten(order="F")
+
     subfi_00 = np.ravel_multi_index(np.array([indfx, indfy]).astype(int),\
                                     shape_q, order="F")
     subfi_10 = np.ravel_multi_index(np.array([indfx+1, indfy]).astype(int),\
