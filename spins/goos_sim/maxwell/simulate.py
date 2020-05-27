@@ -6,6 +6,7 @@ import dataclasses
 import numpy as np
 
 from spins import goos
+from spins.goos_sim import maxwell
 from spins.goos_sim.maxwell import render
 from spins.goos_sim.maxwell import simspace
 from spins import fdfd_solvers
@@ -19,8 +20,28 @@ DIRECT_SOLVER = local_matrix_solvers.MultiprocessingSolver(
     local_matrix_solvers.DirectSolver())
 
 
+@dataclasses.dataclass
+class FdfdSimProp:
+    """Represents properties of a FDFD simulation."""
+    eps: np.ndarray
+    source: np.ndarray
+    wlen: float
+    dxes: List[np.ndarray]
+    pml_layers: List[int]
+    bloch_vec: np.ndarray = None
+    fields: np.ndarray = None
+    grid: gridlock.Grid = None
+    solver: Callable = None
+
+
 class SimSource(goos.Model):
     pass
+
+
+class SimSourceImpl:
+
+    def before_sim(self, sim: FdfdSimProp) -> None:
+        pass
 
 
 @goos.polymorphic_model()
@@ -43,6 +64,54 @@ class GaussianSource(SimSource):
     polarization_angle = goos.types.FloatType()
     power = goos.types.FloatType()
     normalize_by_sim = goos.types.BooleanType(default=False)
+
+
+@maxwell.register(GaussianSource)
+class GaussianSourceImpl(SimSourceImpl):
+
+    def __init__(self, params: GaussianSource) -> None:
+        """Creates a Gaussian beam source.
+
+        Args:
+            params: Gaussian beam source parameters.
+        """
+        self._params = params
+
+    def before_sim(self, sim: FdfdSimProp) -> None:
+        beam_center = self._params.beam_center
+        if beam_center is None:
+            beam_center = self._params.center
+
+        eps_grid = copy.deepcopy(sim.grid)
+        eps_grid.grids = sim.eps
+
+        source, _ = fdfd_tools.free_space_sources.build_gaussian_source(
+            omega=2 * np.pi / sim.wlen,
+            eps_grid=eps_grid,
+            mu=None,
+            axis=gridlock.axisvec2axis(self._params.normal),
+            polarity=gridlock.axisvec2polarity(self._params.normal),
+            slices=simspace.create_region_slices(sim.grid.exyz,
+                                                 self._params.center,
+                                                 self._params.extents),
+            theta=self._params.theta,
+            psi=self._params.psi,
+            polarization_angle=self._params.polarization_angle,
+            w0=self._params.w0,
+            center=beam_center,
+            power=self._params.power)
+
+        if self._params.normalize_by_sim:
+            source = fdfd_tools.free_space_sources.normalize_source_by_sim(
+                omega=2 * np.pi / sim.wlen,
+                source=source,
+                eps=sim.eps,
+                dxes=sim.dxes,
+                pml_layers=sim.pml_layers,
+                solver=sim.solver,
+                power=self._params.power)
+
+        sim.source += source
 
 
 @goos.polymorphic_model()
@@ -69,6 +138,30 @@ class WaveguideModeSource(SimSource):
     power = goos.types.FloatType()
 
 
+@maxwell.register(WaveguideModeSource)
+class WaveguideModeSourceImpl(SimSourceImpl):
+
+    def __init__(self, source: WaveguideModeSource) -> None:
+        self._src = source
+        self._wg_mode = None
+
+    def before_sim(self, sim: FdfdSimProp) -> None:
+        if self._wg_mode is None:
+            self._wg_mode = fdfd_solvers.waveguide_mode.build_waveguide_source(
+                omega=2 * np.pi / sim.wlen,
+                dxes=sim.dxes,
+                eps=sim.eps,
+                mu=None,
+                mode_num=self._src.mode_num,
+                waveguide_slice=simspace.create_region_slices(
+                    sim.grid.exyz, self._src.center, self._src.extents),
+                axis=gridlock.axisvec2axis(self._src.normal),
+                polarity=gridlock.axisvec2polarity(self._src.normal),
+                power=self._src.power)
+
+        sim.source += self._wg_mode
+
+
 @goos.polymorphic_model()
 class DipoleSource(SimSource):
     """Represents a dipole source.
@@ -86,8 +179,58 @@ class DipoleSource(SimSource):
     power = goos.types.FloatType()
 
 
+@maxwell.register(DipoleSource)
+class DipoleSourceImpl(SimSourceImpl):
+
+    def __init__(self, source: DipoleSource) -> None:
+        self._src = source
+        self._J = None
+
+    def before_sim(self, sim: FdfdSimProp) -> None:
+        if self._J is None:
+            self._J = fdfd_solvers.dipole.build_dipole_source(
+                omega=2 * np.pi / sim.wlen,
+                dxes=sim.dxes,
+                eps=sim.eps,
+                position=sim.grid.pos2ind(self._src.position,
+                                          which_shifts=None),
+                axis=self._src.axis,
+                power=self._src.power,
+                phase=np.exp(1j * self._src.phase))
+
+        sim.source += self._J
+
+
 class SimOutput(goos.Model):
     name = goos.types.StringType(default=None)
+
+
+class SimOutputImpl:
+    """Represents an object that helps produce a simulation output.
+
+    Each `SimOutputImpl` type corresponds to a `SimOutput` schema. Each
+    `SimOutputImpl` can have the following hooks:
+    - before_sim: Called before the simulation is started.
+    - eval: Called to retrieve the output.
+    - before_adjoint_sim: Called before the adjoint simulation is started.
+    """
+
+    def __init__(self, params: SimOutput) -> None:
+        pass
+
+    def before_sim(self, sim: FdfdSimProp) -> None:
+        pass
+
+    def eval(self, sim: FdfdSimProp) -> goos.Flow:
+        raise NotImplemented("{} cannot be evaluated.".format(type(self)))
+
+    def before_adjoint_sim(self, adjoint_sim: FdfdSimProp,
+                           grad_val: goos.Flow.Grad) -> None:
+        # If an implementation is not provided, then the gradient must be
+        # `None` to indicate that the gradient is not needed.
+        if grad_val:
+            raise NotImplemented(
+                "Cannot differentiate with respect to {}".format(type(self)))
 
 
 @goos.polymorphic_model()
@@ -100,8 +243,12 @@ class Epsilon(SimOutput):
     type = goos.ModelNameType("output.epsilon")
     wavelength = goos.types.FloatType()
 
-    class Attributes:
-        output_type = goos.Function
+
+@maxwell.register(Epsilon, output_type=goos.Function)
+class EpsilonImpl(SimOutputImpl):
+
+    def eval(self, sim: FdfdSimProp) -> goos.NumericFlow:
+        return goos.NumericFlow(sim.eps)
 
 
 @goos.polymorphic_model()
@@ -114,8 +261,21 @@ class ElectricField(SimOutput):
     type = goos.ModelNameType("output.electric_field")
     wavelength = goos.types.FloatType()
 
-    class Attributes:
-        output_type = goos.Function
+
+@maxwell.register(ElectricField, output_type=goos.Function)
+class ElectricFieldImpl(SimOutputImpl):
+
+    def eval(self, sim: FdfdSimProp) -> goos.NumericFlow:
+        """Computes frequency-domain fields.
+
+        Frequency domain fields are computed for all three components and
+        stacked into one numpy array.
+
+        Returns:
+            A `NumericFlow` where the ith entry of the array corresponds to
+            electric field component i (e.g. 0th entry is Ex).
+        """
+        return goos.NumericFlow(sim.fields)
 
 
 @goos.polymorphic_model()
@@ -146,8 +306,37 @@ class WaveguideModeOverlap(SimOutput):
     power = goos.types.FloatType()
     normalize = goos.types.BooleanType(default=True)
 
-    class Attributes:
-        output_type = goos.Function
+
+@maxwell.register(WaveguideModeOverlap, output_type=goos.Function)
+class WaveguideModeOverlapImpl(SimOutputImpl):
+
+    def __init__(self, overlap: WaveguideModeOverlap) -> None:
+        self._overlap = overlap
+        self._wg_overlap = None
+
+    def before_sim(self, sim: FdfdSimProp) -> None:
+        # Calculate the eigenmode if we have not already.
+        if self._wg_overlap is None:
+            self._wg_overlap = fdfd_solvers.waveguide_mode.build_overlap(
+                omega=2 * np.pi / sim.wlen,
+                dxes=sim.dxes,
+                eps=sim.eps,
+                mu=None,
+                mode_num=self._overlap.mode_num,
+                waveguide_slice=simspace.create_region_slices(
+                    sim.grid.exyz, self._overlap.center, self._overlap.extents),
+                axis=gridlock.axisvec2axis(self._overlap.normal),
+                polarity=gridlock.axisvec2polarity(self._overlap.normal),
+                power=self._overlap.power)
+
+            self._wg_overlap = np.stack(self._wg_overlap, axis=0)
+
+    def eval(self, sim: FdfdSimProp) -> goos.NumericFlow:
+        return goos.NumericFlow(np.sum(self._wg_overlap * sim.fields))
+
+    def before_adjoint_sim(self, adjoint_sim: FdfdSimProp,
+                           grad_val: goos.NumericFlow.Grad) -> None:
+        adjoint_sim.source += np.conj(grad_val.array_grad * self._wg_overlap)
 
 
 class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
@@ -163,7 +352,10 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
             outputs: List[SimOutput],
     ) -> None:
         # Determine the output flow types.
-        output_flow_types = [out.Attributes.output_type for out in outputs]
+        output_flow_types = [
+            maxwell.SIM_REGISTRY.get(out.type).meta["output_type"]
+            for out in outputs
+        ]
         output_names = [out.name for out in outputs]
 
         super().__init__([eps],
@@ -277,20 +469,6 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
         return [goos.NumericFlow.Grad(array_grad=grad)]
 
 
-@dataclasses.dataclass
-class FdfdSimProp:
-    """Represents properties of a FDFD simulation."""
-    eps: np.ndarray
-    source: np.ndarray
-    wlen: float
-    dxes: List[np.ndarray]
-    pml_layers: List[int]
-    bloch_vec: np.ndarray = None
-    fields: np.ndarray = None
-    grid: gridlock.Grid = None
-    solver: Callable = None
-
-
 def _create_solver(solver_name: str, dims: Tuple[int, int, int]) -> Callable:
     """Instantiates a Maxwell solver.
 
@@ -318,262 +496,24 @@ def _create_solver(solver_name: str, dims: Tuple[int, int, int]) -> Callable:
     return solver
 
 
-class SimOutputImpl:
-    """Represents an object that helps produce a simulation output.
-
-    Each `SimOutputImpl` type corresponds to a `SimOutput` schema. Each
-    `SimOutputImpl` can have the following hooks:
-    - before_sim: Called before the simulation is started.
-    - eval: Called to retrieve the output.
-    - before_adjoint_sim: Called before the adjoint simulation is started.
-    """
-
-    def before_sim(self, sim: FdfdSimProp) -> None:
-        pass
-
-    def eval(self, sim: FdfdSimProp) -> goos.Flow:
-        raise NotImplemented("{} cannot be evaluated.".format(type(self)))
-
-    def before_adjoint_sim(self, adjoint_sim: FdfdSimProp,
-                           grad_val: goos.Flow.Grad) -> None:
-        # If an implementation is not provided, then the gradient must be
-        # `None` to indicate that the gradient is not needed.
-        if grad_val:
-            raise NotImplemented(
-                "Cannot differentiate with respect to {}".format(type(self)))
-
-
-class EpsilonImpl(SimOutputImpl):
-
-    def eval(self, sim: FdfdSimProp) -> goos.NumericFlow:
-        return goos.NumericFlow(sim.eps)
-
-
-class ElectricFieldImpl(SimOutputImpl):
-
-    def eval(self, sim: FdfdSimProp) -> goos.NumericFlow:
-        """Computes frequency-domain fields.
-
-        Frequency domain fields are computed for all three components and
-        stacked into one numpy array.
-
-        Returns:
-            A `NumericFlow` where the ith entry of the array corresponds to
-            electric field component i (e.g. 0th entry is Ex).
-        """
-        return goos.NumericFlow(sim.fields)
-
-
-class WaveguideModeOverlapImpl(SimOutputImpl):
-
-    def __init__(self, overlap: WaveguideModeOverlap) -> None:
-        self._overlap = overlap
-        self._wg_overlap = None
-
-    def before_sim(self, sim: FdfdSimProp) -> None:
-        # Calculate the eigenmode if we have not already.
-        if self._wg_overlap is None:
-            self._wg_overlap = fdfd_solvers.waveguide_mode.build_overlap(
-                omega=2 * np.pi / sim.wlen,
-                dxes=sim.dxes,
-                eps=sim.eps,
-                mu=None,
-                mode_num=self._overlap.mode_num,
-                waveguide_slice=simspace.create_region_slices(
-                    sim.grid.exyz, self._overlap.center, self._overlap.extents),
-                axis=gridlock.axisvec2axis(self._overlap.normal),
-                polarity=gridlock.axisvec2polarity(self._overlap.normal),
-                power=self._overlap.power)
-
-            self._wg_overlap = np.stack(self._wg_overlap, axis=0)
-
-    def eval(self, sim: FdfdSimProp) -> goos.NumericFlow:
-        return goos.NumericFlow(np.sum(self._wg_overlap * sim.fields))
-
-    def before_adjoint_sim(self, adjoint_sim: FdfdSimProp,
-                           grad_val: goos.NumericFlow.Grad) -> None:
-        adjoint_sim.source += np.conj(grad_val.array_grad * self._wg_overlap)
-
-
 def _create_outputs(outputs: List[SimOutput]) -> List[SimOutputImpl]:
     output_impls = []
     for out in outputs:
-        if type(out) == Epsilon:
-            output_impl = EpsilonImpl()
-        elif type(out) == ElectricField:
-            output_impl = ElectricFieldImpl()
-        elif type(out) == WaveguideModeOverlap:
-            output_impl = WaveguideModeOverlapImpl(out)
-        elif type(out) == EigenValue:
-            output_impl = EigenValueImpl()
-        else:
+        cls = maxwell.SIM_REGISTRY.get(out.type)
+        if cls is None:
             raise ValueError("Unsupported output type, got {}".format(out.type))
-        output_impls.append(output_impl)
+        output_impls.append(cls.creator(out))
     return output_impls
-
-
-class SimSourceImpl:
-
-    def before_sim(self, sim: FdfdSimProp) -> None:
-        pass
-
-
-class WaveguideModeSourceImpl(SimSourceImpl):
-
-    def __init__(self, source: WaveguideModeSource) -> None:
-        self._src = source
-        self._wg_mode = None
-
-    def before_sim(self, sim: FdfdSimProp) -> None:
-        if self._wg_mode is None:
-            self._wg_mode = fdfd_solvers.waveguide_mode.build_waveguide_source(
-                omega=2 * np.pi / sim.wlen,
-                dxes=sim.dxes,
-                eps=sim.eps,
-                mu=None,
-                mode_num=self._src.mode_num,
-                waveguide_slice=simspace.create_region_slices(
-                    sim.grid.exyz, self._src.center, self._src.extents),
-                axis=gridlock.axisvec2axis(self._src.normal),
-                polarity=gridlock.axisvec2polarity(self._src.normal),
-                power=self._src.power)
-
-        sim.source += self._wg_mode
-
-
-class GaussianSourceImpl(SimSourceImpl):
-
-    def __init__(self, params: GaussianSource) -> None:
-        """Creates a Gaussian beam source.
-
-        Args:
-            params: Gaussian beam source parameters.
-        """
-        self._params = params
-
-    def before_sim(self, sim: FdfdSimProp) -> None:
-        beam_center = self._params.beam_center
-        if beam_center is None:
-            beam_center = self._params.center
-
-        eps_grid = copy.deepcopy(sim.grid)
-        eps_grid.grids = sim.eps
-
-        source, _ = fdfd_tools.free_space_sources.build_gaussian_source(
-            omega=2 * np.pi / sim.wlen,
-            eps_grid=eps_grid,
-            mu=None,
-            axis=gridlock.axisvec2axis(self._params.normal),
-            polarity=gridlock.axisvec2polarity(self._params.normal),
-            slices=simspace.create_region_slices(sim.grid.exyz,
-                                                 self._params.center,
-                                                 self._params.extents),
-            theta=self._params.theta,
-            psi=self._params.psi,
-            polarization_angle=self._params.polarization_angle,
-            w0=self._params.w0,
-            center=beam_center,
-            power=self._params.power)
-
-        if self._params.normalize_by_sim:
-            source = fdfd_tools.free_space_sources.normalize_source_by_sim(
-                omega=2 * np.pi / sim.wlen,
-                source=source,
-                eps=sim.eps,
-                dxes=sim.dxes,
-                pml_layers=sim.pml_layers,
-                solver=sim.solver,
-                power=self._params.power)
-
-        sim.source += source
-
-
-class DipoleSourceImpl(SimSourceImpl):
-
-    def __init__(self, source: DipoleSource) -> None:
-        self._src = source
-        self._J = None
-
-    def before_sim(self, sim: FdfdSimProp) -> None:
-        if self._J is None:
-            self._J = fdfd_solvers.dipole.build_dipole_source(
-                omega=2 * np.pi / sim.wlen,
-                dxes=sim.dxes,
-                eps=sim.eps,
-                position=sim.grid.pos2ind(self._src.position,
-                                          which_shifts=None),
-                axis=self._src.axis,
-                power=self._src.power,
-                phase=np.exp(1j * self._src.phase))
-
-        sim.source += self._J
 
 
 def _create_sources(sources: List[SimSource]) -> List[SimSourceImpl]:
     source_impls = []
     for src in sources:
-        if type(src) == WaveguideModeSource:
-            source_impls.append(WaveguideModeSourceImpl(src))
-        elif type(src) == GaussianSource:
-            source_impls.append(GaussianSourceImpl(src))
-        elif type(src) == DipoleSource:
-            source_impls.append(DipoleSourceImpl(src))
-        else:
-            raise ValueError("Unsupported source type, got {}".format(src.type))
+        cls = maxwell.SIM_REGISTRY.get(src.type)
+        if cls is None:
+            raise ValueError("Unsupported output type, got {}".format(src.type))
+        source_impls.append(cls.creator(src))
     return source_impls
-
-
-class FdfdSimulation(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
-    node_type = "sim.maxwell.fdfd_simulation"
-
-    def __init__(self, eps: goos.Shape, source: goos.Function, solver: str,
-                 wavelengths: List[float],
-                 simulation_space: simspace.SimulationSpace,
-                 background: goos.material.Material,
-                 outputs: List[SimOutput]) -> None:
-        # Determine the output flow types.
-        output_flow_types = [out.Attributes.output_type for out in outputs]
-
-        super().__init__([eps, source], flow_types=output_flow_types)
-
-        # Internally setup a plan to handle the simulation.
-        self._plan = goos.OptimizationPlan()
-        self._sims = []
-        self._eps = eps
-        with self._plan:
-            for wlen in wavelengths:
-                # TODO(logansu): Use a placeholder dummy for the shape to
-                # reduce runtime and save memory.
-                eps_rendered = render.RenderShape(
-                    self._eps,
-                    region=simulation_space.sim_region,
-                    simulation_symmetry=simulation_space.reflection_symmetry,
-                    mesh=simulation_space.mesh,
-                    background=background,
-                    wavelength=wlen)
-
-                sim_result = SimulateNode(
-                    eps=eps_rendered,
-                    source=source,
-                    wavelength=wlen,
-                    simulation_space=simulation_space,
-                    solver=solver,
-                    outputs=outputs,
-                )
-
-                self._sims.append(sim_result)
-
-    def eval(self, inputs):
-        with self._plan:
-            from spins.goos import graph_executor
-            override_map = {
-                self._eps: (inputs[0],
-                            goos.NodeFlags(
-                                const_flags=goos.NumericFlow.ConstFlags(False),
-                                frozen_flags=goos.NumericFlow.ConstFlags(True)))
-            }
-            return goos.ArrayFlow(
-                graph_executor.eval_fun(self._sims, override_map))
 
 
 def fdfd_simulation(wavelength: float,
@@ -628,7 +568,10 @@ class SimulateEigNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
             outputs: List[SimOutput],
     ) -> None:
         # Determine the output flow types.
-        output_flow_types = [out.Attributes.output_type for out in outputs]
+        output_flow_types = [
+            maxwell.SIM_REGISTRY.get(out.type).meta["output_type"]
+            for out in outputs
+        ]
         output_names = [out.name for out in outputs]
 
         super().__init__([eps],
@@ -809,10 +752,8 @@ class EigenValue(SimOutput):
     type = goos.ModelNameType("output.eigen_value")
     bloch_vector = goos.types.FloatType()
 
-    class Attributes:
-        output_type = goos.Function
 
-
+@maxwell.register(EigenValue, output_type=goos.Function)
 class EigenValueImpl(SimOutputImpl):
 
     def eval(self, sim: EigSimProp) -> goos.NumericFlow:
