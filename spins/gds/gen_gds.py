@@ -72,12 +72,18 @@ def gen_gds(poly_coords: List[np.ndarray],
                 # polygon satisfies the current overlap number.
                 for i in target_polys[::-1]:
                     containment_list = np.nonzero(containment_mx[i, :])[0]
-                    for j in containment_list[::-1]:
-                        # The boolean 'not' operation is performed here.
-                        # We replace polygon[i] of the two polygons with the
-                        # result of the operation and delete polygon[j].
-                        gds_polygons[i] = gdspy.fast_boolean(
-                            gds_polygons[i], gds_polygons[j], 'not', layer=0)
+                    # Concatenate all the contained polygons to subtract out.
+                    poly_list = sum([
+                        gds_polygons[j].polygons for j in containment_list
+                    ], [])
+                    # Note that we had to turn precision from the default 1e-3
+                    # to 1e-6 to avoid errors in the NOT operation.
+                    gds_polygons[i] = gdspy.boolean(gds_polygons[i],
+                                                    gdspy.PolygonSet(poly_list),
+                                                    "not",
+                                                    layer=0,
+                                                    precision=1e-6)
+                    for j in containment_list:
                         gds_polygons[j] = None
                         test_points[j] = None
 
