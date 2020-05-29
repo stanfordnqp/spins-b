@@ -33,6 +33,7 @@ class FdfdSimProp:
     fields: np.ndarray = None
     grid: gridlock.Grid = None
     solver: Callable = None
+    symmetry: np.ndarray = goos.np_zero_field(3)
 
 
 class SimSource(goos.Model):
@@ -480,6 +481,7 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
             int(length / self._simspace.mesh.dx)
             for length in self._simspace.pml_thickness
         ]
+        self._symmetry = simulation_space.reflection_symmetry
 
         self._sources = _create_sources(sources)
         self._outputs = _create_outputs(outputs)
@@ -507,7 +509,8 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
                               pml_layers=self._pml_layers,
                               bloch_vec=self._bloch_vector,
                               grid=self._grid,
-                              solver=self._solver)
+                              solver=self._solver,
+                              symmetry=self._symmetry)
 
             for src in self._sources:
                 src.before_sim(sim)
@@ -523,6 +526,7 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
                 J=fdfd_tools.vec(sim.source),
                 pml_layers=sim.pml_layers,
                 bloch_vec=sim.bloch_vec,
+                symmetry=sim.symmetry
             )
             fields = fdfd_tools.unvec(fields, eps[0].shape)
             sim.fields = np.stack(fields, axis=0)
@@ -542,7 +546,8 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
                           dxes=self._dxes,
                           pml_layers=self._pml_layers,
                           bloch_vec=self._bloch_vector,
-                          grid=self._grid)
+                          grid=self._grid,
+                          symmetry=self._symmetry)
 
         omega = 2 * np.pi / sim.wlen
         for out, g in zip(self._outputs, grad_val.flows_grad):
@@ -556,6 +561,7 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
             J=fdfd_tools.vec(sim.source),
             pml_layers=sim.pml_layers,
             bloch_vec=sim.bloch_vec,
+            symmetry=sim.symmetry,
             adjoint=True,
         )
         adjoint_fields = np.stack(fdfd_tools.unvec(adjoint_fields,
@@ -653,7 +659,7 @@ class EigSimProp:
     dxes: List[np.ndarray]
     pml_layers: List[int]
     bloch_vec: np.ndarray = None
-    symmetry: np.ndarray = np.zeros(3)
+    symmetry: np.ndarray = goos.np_zero_field(3)
     fields: List[np.ndarray] = None
     omegas: List[complex] = None
     grid: gridlock.Grid = None
