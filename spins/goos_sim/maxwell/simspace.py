@@ -27,6 +27,13 @@ class UniformMesh(MeshModel):
     dx = goos.types.FloatType()
 
 
+class Symmetry:
+    """Declares symmetries for `SimulationSpace`."""
+    NONE = 0
+    PEC = 1
+    PMC = 2
+
+
 class SimulationSpace(goos.Model):
     """Defines a simulation space.
 

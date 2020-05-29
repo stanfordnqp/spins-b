@@ -1,7 +1,8 @@
-from typing import Callable, List, Tuple
+from typing import Callable, List, Optional, Tuple
 
 import copy
 import dataclasses
+import os
 
 import numpy as np
 
@@ -32,6 +33,7 @@ class FdfdSimProp:
     fields: np.ndarray = None
     grid: gridlock.Grid = None
     solver: Callable = None
+    symmetry: np.ndarray = goos.np_zero_field(3)
 
 
 class SimSource(goos.Model):
@@ -339,17 +341,115 @@ class WaveguideModeOverlapImpl(SimOutputImpl):
         adjoint_sim.source += np.conj(grad_val.array_grad * self._wg_overlap)
 
 
+class Solver(goos.Model):
+    pass
+
+
+class SolverImpl:
+    """Represents a matrix solver."""
+
+    def __init__(self, solver: Solver, dims: Tuple[int, int, int]):
+        """Initializes the solver.
+
+        Args:
+            solver: Solver parameters.
+            dims: Dimensions of the simulation.
+        """
+        self._solver = solver
+        self._dims = dims
+
+    def solve(
+        self,
+        omega: complex,
+        dxes: List[List[np.ndarray]],
+        J: np.ndarray,
+        epsilon: np.ndarray,
+        pml_layers: Optional[fdfd_tools.PmlLayers] = None,
+        mu: Optional[np.ndarray] = None,
+        bloch_vec: Optional[np.ndarray] = None,
+    ) -> None:
+        pass
+
+
+@goos.polymorphic_model()
+class DirectSolver(Solver):
+    """Defines a direct solver.
+
+    Attributes:
+        multiprocessing: If `True`, uses a multiprocessing solver, which enables
+            solves to happen concurrently.
+    """
+    type = goos.ModelNameType("solver.direct")
+    multiprocessing = goos.types.BooleanType(default=True)
+
+
+@maxwell.register(DirectSolver)
+class DirectSolverImpl:
+
+    def __init__(self, solver: DirectSolver, dims: Tuple[int, int,
+                                                         int]) -> None:
+        if solver.multiprocessing:
+            self._solver = DIRECT_SOLVER
+        else:
+            self._solver = local_matrix_solvers.DirectSolver()
+
+    def solve(self, *args, **kwargs):
+        return self._solver.solve(*args, **kwargs)
+
+
+@goos.polymorphic_model()
+class MaxwellSolver(Solver):
+    """Defines a GPU-accelerated Maxwell solver.
+
+    The Maxwell solver uses a GPU-accelerated iterative algorithm to solve
+    the matrix.
+
+    Attributes:
+        solver: The specific solver to use in Maxwell.
+        server: Location of the Maxwell server.
+        err_thresh: Error threshold to use for the solve.
+        max_iters: Maximum number of iterations in iterative solve.
+    """
+    type = goos.ModelNameType("solver.maxwell")
+    solver = goos.types.StringType(default="maxwell_cg",
+                                   choices=("maxwell_cg", "maxwell_bicgstab",
+                                            "maxwell_eig"))
+    server = goos.types.StringType()
+    err_thresh = goos.types.FloatType(default=1e-5)
+    max_iters = goos.types.FloatType(default=20000)
+
+
+@maxwell.register(MaxwellSolver)
+class MaxwellSolverImpl:
+
+    def __init__(self, solver: DirectSolver, dims: Tuple[int, int,
+                                                         int]) -> None:
+        from spins.fdfd_solvers.maxwell import MaxwellSolver
+        server = solver.server
+        if server is None:
+            server = os.getenv("MAXWELL_SERVER", "localhost:9041")
+        self._solver = MaxwellSolver(dims,
+                                     solver=solver.solver,
+                                     server=server,
+                                     err_thresh=solver.err_thresh,
+                                     max_iters=solver.max_iters)
+
+    def solve(self, *args, **kwargs):
+        return self._solver.solve(*args, **kwargs)
+
+
 class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
     node_type = "sim.maxwell.simulate_node"
 
     def __init__(
-            self,
-            eps: goos.Function,
-            sources: List[SimSource],
-            solver: str,
-            wavelength: float,
-            simulation_space: simspace.SimulationSpace,
-            outputs: List[SimOutput],
+        self,
+        eps: goos.Function,
+        sources: List[SimSource],
+        wavelength: float,
+        simulation_space: simspace.SimulationSpace,
+        outputs: List[SimOutput],
+        solver: str = None,
+        solver_info: Solver = None,
     ) -> None:
         # Determine the output flow types.
         output_flow_types = [
@@ -360,7 +460,8 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
 
         super().__init__([eps],
                          flow_names=output_names,
-                         flow_types=output_flow_types)
+                         flow_types=output_flow_types,
+                         heavy_compute=True)
 
         # Create an empty grid to have access to `dxes` and `shape`.
         self._grid = gridlock.Grid(simspace.create_edge_coords(
@@ -372,7 +473,7 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
                                    num_grids=3)
         self._dxes = [self._grid.dxyz, self._grid.autoshifted_dxyz()]
 
-        self._solver = _create_solver(solver, self._grid.shape)
+        self._solver = _create_solver(solver, solver_info, self._grid.shape)
         self._simspace = simulation_space
         self._bloch_vector = [0, 0, 0]
         self._wlen = wavelength
@@ -380,6 +481,7 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
             int(length / self._simspace.mesh.dx)
             for length in self._simspace.pml_thickness
         ]
+        self._symmetry = simulation_space.reflection_symmetry
 
         self._sources = _create_sources(sources)
         self._outputs = _create_outputs(outputs)
@@ -407,7 +509,8 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
                               pml_layers=self._pml_layers,
                               bloch_vec=self._bloch_vector,
                               grid=self._grid,
-                              solver=self._solver)
+                              solver=self._solver,
+                              symmetry=self._symmetry)
 
             for src in self._sources:
                 src.before_sim(sim)
@@ -423,6 +526,7 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
                 J=fdfd_tools.vec(sim.source),
                 pml_layers=sim.pml_layers,
                 bloch_vec=sim.bloch_vec,
+                symmetry=sim.symmetry
             )
             fields = fdfd_tools.unvec(fields, eps[0].shape)
             sim.fields = np.stack(fields, axis=0)
@@ -442,7 +546,8 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
                           dxes=self._dxes,
                           pml_layers=self._pml_layers,
                           bloch_vec=self._bloch_vector,
-                          grid=self._grid)
+                          grid=self._grid,
+                          symmetry=self._symmetry)
 
         omega = 2 * np.pi / sim.wlen
         for out, g in zip(self._outputs, grad_val.flows_grad):
@@ -456,6 +561,7 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
             J=fdfd_tools.vec(sim.source),
             pml_layers=sim.pml_layers,
             bloch_vec=sim.bloch_vec,
+            symmetry=sim.symmetry,
             adjoint=True,
         )
         adjoint_fields = np.stack(fdfd_tools.unvec(adjoint_fields,
@@ -469,7 +575,8 @@ class SimulateNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
         return [goos.NumericFlow.Grad(array_grad=grad)]
 
 
-def _create_solver(solver_name: str, dims: Tuple[int, int, int]) -> Callable:
+def _create_solver(solver_name: str, solver_info: Optional[Solver],
+                   dims: Tuple[int, int, int]) -> Callable:
     """Instantiates a Maxwell solver.
 
     Args:
@@ -479,19 +586,23 @@ def _create_solver(solver_name: str, dims: Tuple[int, int, int]) -> Callable:
     Returns:
          A callable solver object.
     """
-    if solver_name == "maxwell_cg":
-        from spins.fdfd_solvers.maxwell import MaxwellSolver
-        solver = MaxwellSolver(dims, solver="CG")
-    elif solver_name == "maxwell_bicgstab":
-        from spins.fdfd_solvers.maxwell import MaxwellSolver
-        solver = MaxwellSolver(dims, solver="biCGSTAB")
-    elif solver_name == "maxwell_eig":
-        from spins.fdfd_solvers.maxwell import MaxwellSolver
-        solver = MaxwellSolver(dims, solver="Jacobi-Davidson")
-    elif solver_name == "local_direct":
-        solver = DIRECT_SOLVER
+    if solver_info:
+        solver = maxwell.SIM_REGISTRY.get(solver_info.type).creator(
+            solver_info, dims)
     else:
-        raise ValueError("Unknown solver, got {}".format(solver_name))
+        if solver_name == "maxwell_cg":
+            from spins.fdfd_solvers.maxwell import MaxwellSolver
+            solver = MaxwellSolver(dims, solver="CG")
+        elif solver_name == "maxwell_bicgstab":
+            from spins.fdfd_solvers.maxwell import MaxwellSolver
+            solver = MaxwellSolver(dims, solver="biCGSTAB")
+        elif solver_name == "maxwell_eig":
+            from spins.fdfd_solvers.maxwell import MaxwellSolver
+            solver = MaxwellSolver(dims, solver="Jacobi-Davidson")
+        elif solver_name == "local_direct":
+            solver = DIRECT_SOLVER
+        else:
+            raise ValueError("Unknown solver, got {}".format(solver_name))
 
     return solver
 
@@ -548,7 +659,7 @@ class EigSimProp:
     dxes: List[np.ndarray]
     pml_layers: List[int]
     bloch_vec: np.ndarray = None
-    symmetry: np.ndarray = np.zeros(3)
+    symmetry: np.ndarray = goos.np_zero_field(3)
     fields: List[np.ndarray] = None
     omegas: List[complex] = None
     grid: gridlock.Grid = None
@@ -558,14 +669,14 @@ class SimulateEigNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
     node_type = "sim.maxwell.simulate_eig_node"
 
     def __init__(
-            self,
-            eps: goos.Function,
-            sources: List[SimSource],
-            solver: str,
-            wavelength: float,
-            bloch_vector: List[float],
-            simulation_space: simspace.SimulationSpace,
-            outputs: List[SimOutput],
+        self,
+        eps: goos.Function,
+        sources: List[SimSource],
+        solver: str,
+        wavelength: float,
+        bloch_vector: List[float],
+        simulation_space: simspace.SimulationSpace,
+        outputs: List[SimOutput],
     ) -> None:
         # Determine the output flow types.
         output_flow_types = [
@@ -590,7 +701,7 @@ class SimulateEigNode(goos.ArrayFlowOpMixin, goos.ProblemGraphNode):
 
         eigen_solvers = ["maxwell_eig", "local_direct_eig"]
         if solver in eigen_solvers:
-            self._solver = _create_solver(solver, self._grid.shape)
+            self._solver = _create_solver(solver, None, self._grid.shape)
         else:
             raise ValueError(
                 "Invalid solver, solver for eigensolves need to be in " +

@@ -44,7 +44,7 @@ def test_simulate_2d():
                     power=1,
                 )
             ],
-            solver="local_direct",
+            solver_info=maxwell.DirectSolver(),
             outputs=[
                 maxwell.Epsilon(name="eps"),
                 maxwell.ElectricField(name="fields"),

@@ -1,3 +1,15 @@
+"""Optimizes a 90 degree waveguide bend.
+
+Usage:
+
+Run optimization:
+
+    $ python wdm2.py run [save-folder]
+
+View results:
+
+    $ python wdm2.py view [save-folder]
+"""
 import os
 import pickle
 
@@ -12,8 +24,8 @@ from spins.invdes.problem_graph import optplan
 
 def main(save_folder: str,
          min_feature: float = 100,
-         use_cubic: bool = False,
-         sim_3d: bool = True,
+         use_cubic: bool = True,
+         sim_3d: bool = False,
          visualize: bool = False) -> None:
     goos.util.setup_logging(save_folder)
 
@@ -88,16 +100,19 @@ def main(save_folder: str,
 def make_objective(eps: goos.Shape, stage: str, sim_3d: bool):
     if sim_3d:
         sim_z_extent = 2500
-        solver = "maxwell_cg"
+        solver_info = maxwell.MaxwellSolver(solver="maxwell_cg",
+                                            err_thresh=1e-2)
+        pml_thickness = [400] * 6
     else:
         sim_z_extent = 40
-        solver = "local_direct"
+        solver_info = maxwell.DirectSolver()
+        pml_thickness = [400, 400, 400, 400, 0, 0]
 
     sim = maxwell.fdfd_simulation(
         name="sim_{}".format(stage),
         wavelength=1550,
         eps=eps,
-        solver=solver,
+        solver_info=solver_info,
         sources=[
             maxwell.WaveguideModeSource(center=[-1400, 0, 0],
                                         extents=[0, 2500, 1000],
@@ -111,7 +126,7 @@ def make_objective(eps: goos.Shape, stage: str, sim_3d: bool):
                 center=[0, 0, 0],
                 extents=[4000, 4000, sim_z_extent],
             ),
-            pml_thickness=[400, 400, 400, 400, 0, 0]),
+            pml_thickness=pml_thickness),
         background=goos.material.Material(index=1.0),
         outputs=[
             maxwell.Epsilon(name="eps"),
@@ -144,18 +159,19 @@ def visualize(folder: str, step: int):
     if step is None:
         step = goos.util.get_latest_log_step(folder)
 
+    step = int(step)
+
     with open(os.path.join(folder, "step{0}.pkl".format(step)), "rb") as fp:
         data = pickle.load(fp)
 
     plt.figure()
     plt.subplot(1, 2, 1)
-    plt.imshow(
-        np.abs(data["monitor_data"]["sim_cont.eps".format(stage)][1].squeeze()))
+    eps = np.linalg.norm(data["monitor_data"]["sim_cont.eps"], axis=0)
+    plt.imshow(eps[:, :, eps.shape[2] // 2].squeeze())
     plt.colorbar()
     plt.subplot(1, 2, 2)
-    plt.imshow(
-        np.abs(
-            data["monitor_data"]["sim_cont.field".format(stage)][1].squeeze()))
+    field_norm = np.linalg.norm(data["monitor_data"]["sim_cont.field"], axis=0)
+    plt.imshow(field_norm[:, :, field_norm.shape[2] // 2].squeeze())
     plt.colorbar()
     plt.show()
 
@@ -171,4 +187,4 @@ if __name__ == "__main__":
     if args.action == "run":
         main(args.save_folder, visualize=False)
     elif args.action == "view":
-        visualize(args.save_folder, int(args.step))
+        visualize(args.save_folder, args.step)
