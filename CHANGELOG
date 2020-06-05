@@ -44,6 +44,10 @@ We will try to document all notable changes in this file.
 - (goos) Array slicing function [@vcruysse]
 - Dipole source [@vcruysse]
 
+## 2020-04-20
+### Added
+- (invdes) Custom overlap function [@nvsapra]
+
 ## 2020-04-23
 ### Added
 - (goos) Add ability to resume plan [@ludi1001]
