@@ -22,7 +22,7 @@ def build_dipole_source(omega: complex, dxes: List[np.ndarray],
     Returns:
         Current source J.
     """
-
+    position = [int(x) for x in position]
     dx = dxes[0][int(axis)][position[int(axis)]]
     eps_source = eps[int(axis)][tuple(position)]
 
