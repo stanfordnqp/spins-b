@@ -114,13 +114,18 @@ class MaxwellSolver:
               mu: np.ndarray = None,
               pec: np.ndarray = None,
               pmc: np.ndarray = None,
-              pemc: np.ndarray = np.zeros(6),
+              pemc: np.ndarray = None,
               bloch_vec: np.ndarray = None,
-              symmetry: np.ndarray = np.zeros(3),
+              symmetry: np.ndarray = None,
               adjoint: bool = False,
               E0: np.ndarray = None,
               solver_info: bool = False,
               n_eig: int = 1):
+        if symmetry is None:
+            symmetry = np.zeros(3)
+        if pemc is None:
+            pemc = np.zeros(6)
+
         server_url = 'http://' + self.server + '/'
 
         dxes = fdfd_tools.grid.apply_scpml(dxes, pml_layers, omega)

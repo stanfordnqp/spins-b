@@ -177,8 +177,8 @@ class DipoleSource(SimSource):
     type = goos.ModelNameType("source.dipole_source")
     position = goos.Vec3d()
     axis = goos.types.IntType()
-    phase = goos.types.FloatType()
-    power = goos.types.FloatType()
+    phase = goos.types.FloatType(default=0)
+    power = goos.types.FloatType(default=1)
 
 
 @maxwell.register(DipoleSource)
