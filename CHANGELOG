@@ -56,3 +56,19 @@ We will try to document all notable changes in this file.
 
 ### Changed
 - (goos) Nodes are added immediately to plan upon creation [@ludi1001]
+
+## 2020-06-02
+### Added
+- (goos) Schema registration system introduced to make solver extensions easier [@ludi1001]
+
+### Changed
+- (goos) Allow solver info specification in Maxwell solver [@ludi1001]
+- (goos) Refactor Maxwell solver to use schema registration [@ludi1001]
+
+## 2020-06-04
+### Added
+- (goos) Colab examples [@jskarda, @gahn]
+
+## 2020-06-07
+### Changed
+- Fix cubic parametrization GDS bug that scaled polygons by factor of 2 [@ludi1001]
