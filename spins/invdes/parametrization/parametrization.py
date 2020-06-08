@@ -309,8 +309,8 @@ class CubicParam(Parametrization):
             output:
                 list of the polygons
         '''
-        x_z = self.x_z * dx
-        y_z = self.y_z * dx
+        x_z = self.x_z * dx / 2
+        y_z = self.y_z * dx / 2
         design_area_fine = np.array([len(x_z), len(y_z)])
         phi = self.vec2f @ self.vector
         phi_mat = phi.reshape(design_area_fine, order='F')
@@ -319,8 +319,8 @@ class CubicParam(Parametrization):
         phi_extended = np.zeros(design_area_fine + 2)
         phi_extended[1:-1, 1:-1] = phi_mat
 
-        x_extended = np.r_[x_z[0] - dx, x_z, x_z[-1] + dx]
-        y_extended = np.r_[y_z[0] - dx, y_z, y_z[-1] + dx]
+        x_extended = np.r_[x_z[0] - dx / 2, x_z, x_z[-1] + dx / 2]
+        y_extended = np.r_[y_z[0] - dx / 2, y_z, y_z[-1] + dx / 2]
 
         import matplotlib.pyplot as plt
         cs = plt.contour(x_extended, y_extended, phi_extended - 0.5, [0])
