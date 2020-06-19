@@ -40,19 +40,21 @@ class NumpyArrayType(types.BaseType):
     Complex arrays are not supported at this time.
     """
 
-    # TODO(logansu): Support complex arrays.
     def to_native(self, value, context=None):
         if isinstance(value, np.ndarray):
             return value
         elif isinstance(value, numbers.Number):
             return value
+        elif isinstance(value, dict):
+            return np.array(value["real"]) + 1j * np.array(value["imag"])
         return np.array(value)
 
     def to_primitive(self, value, context=None):
-        return np.array(value).tolist()
-
-    def validate_not_complex(self, value, context=None):
+        value = np.array(value)
         if np.iscomplexobj(value):
-            raise models.ValidationError(
-                "NumpyArrayType does not support complex values,"
-                " got {}".format(value))
+            return {
+                "real": np.real(value).tolist(),
+                "imag": np.imag(value).tolist(),
+            }
+        else:
+            return np.array(value).tolist()
