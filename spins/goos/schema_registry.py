@@ -45,7 +45,7 @@ class SchemaRegistryStack:
     def push(self, registry: SchemaRegistry = None):
         if not registry:
             registry = SchemaRegistry()
-        self._stack.append(context)
+        self._stack.append(registry)
 
     def pop(self):
         return self._stack.pop()
