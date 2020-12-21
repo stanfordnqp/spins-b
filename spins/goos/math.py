@@ -561,3 +561,18 @@ class Slice(Function):
                 raise ValueError("Invalid slice value, got " +
                                  str(self._slices[i]))
         return tuple(slices)
+
+class Conjugate(Function):
+    node_type = "goos.function.conjugate"
+
+    def __init__(self, fun: Function) -> None:
+        super().__init__(fun)
+
+    def eval(self, input_vals: List[goos.NumericFlow]) -> goos.NumericFlow:
+        return goos.NumericFlow(np.conj(input_vals[0].array))
+
+    def grad(self, input_vals: List[goos.NumericFlow],
+            grad_val: goos.NumericFlow.Grad) -> goos.NumericFlow.Grad:
+        grad = type(input_vals[0]).Grad()
+        grad.array_grad = np.conj(grad_val.array_grad)
+        return [grad]

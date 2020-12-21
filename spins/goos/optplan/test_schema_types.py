@@ -59,6 +59,9 @@ def test_numpy_array_type():
     assert list(model_native.keys()) == ["x"]
     np.testing.assert_array_equal(model_native["x"], [[1], [2]])
 
-    with pytest.raises(models.DataError, match="not support complex"):
-        model = Model({"x": 1 + 2j})
-        model.validate()
+    model = Model({"x": [1 + 2j, 3 + 4j]})
+    model.validate()
+    assert model.to_primitive() == {"x": { "real": [1, 3], "imag": [2, 4]}}
+    model_native = model.to_native()
+    assert list(model_native.keys()) == ["x"]
+    np.testing.assert_array_equal(model_native["x"], [1 + 2j, 3 + 4j])
