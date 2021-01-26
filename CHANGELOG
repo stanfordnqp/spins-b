@@ -72,3 +72,11 @@ We will try to document all notable changes in this file.
 ## 2020-06-07
 ### Changed
 - Fix cubic parametrization GDS bug that scaled polygons by factor of 2 [@ludi1001]
+
+## 2020-12-21
+### Changed
+- Added conjugate function in goos math [@jskarda]
+
+## 2021-01-26
+### Added
+- (goos) Sphere shape to goos shapes [@jskarda]
