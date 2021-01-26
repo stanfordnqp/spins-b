@@ -85,7 +85,7 @@ def cuboid(extents, pos, rot=None, **kwargs):
 
 
 class CylinderFlow(ShapeFlow):
-    """Represents a rectangular prism.
+    """Represents a cylinder shape.
 
     Attributes:
         radius: The radius of the cylinder.
@@ -135,6 +135,50 @@ class Cylinder(Shape):
             flows.NumericFlow.Grad(grad_val.rot_grad),
         ]
 
+class SphereFlow(ShapeFlow):
+    """Represents a sphere shape.
+
+    Attributes:
+        radius: The radius of the sphere.
+        num_points: Number of points to use to approximate the sphere.
+    """
+    radius: float = 100
+    num_points: int = 32
+
+
+class Sphere(Shape):
+    node_type = "goos.shape.sphere"
+
+    def __init__(self,
+                 pos: goos.Function,
+                 radius: goos.Function,
+                 rot: goos.Function = None,
+                 material: goos.material.Material = None) -> None:
+        if rot is None:
+            rot = goos.Constant([0, 0, 0])
+        super().__init__([pos, radius, rot])
+        self._mat = goos.material.get_material(material)
+
+    def eval_const_flags(
+        self, inputs: List[flows.NumericFlow.ConstFlags]
+    ) -> SphereFlow.ConstFlags:
+        return SphereFlow.ConstFlags(pos=inputs[0].array,
+                                       radius=inputs[1].array,
+                                       rot=inputs[2].array)
+
+    def eval(self, inputs: List[flows.NumericFlow]) -> CuboidFlow:
+        return SphereFlow(pos=inputs[0].array,
+                            radius=inputs[1].array,
+                            rot=inputs[2].array,
+                            material=self._mat)
+
+    def grad(self, inputs: List[flows.NumericFlow],
+             grad_val: SphereFlow.Grad) -> List[flows.NumericFlow.Grad]:
+        return [
+            flows.NumericFlow.Grad(grad_val.pos_grad),
+            flows.NumericFlow.Grad(grad_val.radius_grad),
+            flows.NumericFlow.Grad(grad_val.rot_grad),
+        ]
 
 class PixelatedContShapeFlow(ShapeFlow, goos.NumericFlow):
     """Represents a shape with continuous permittivity distribution.
