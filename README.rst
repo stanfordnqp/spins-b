@@ -7,7 +7,7 @@
 SPINS-B
 =======
 
-SPINS-B is the open source version of `SPINS <http://techfinder.stanford.edu/technologies/S18-012_inverse-design-software-for>`_,
+SPINS-B is the open source version of `SPINS <https://stanford.resoluteinnovation.com/technologies/S18-012_spins-inverse-design-software-for>`_,
 a framework for gradient-based (adjoint) photonic optimization developed over
 the past decade at Jelena Vuckovic's `Nanoscale and Quantum Photonics Lab <http://nqp.stanford.edu>`_
 at Stanford University. The full version can be licensed
