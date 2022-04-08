@@ -89,7 +89,7 @@ def main(save_folder: str,
                 #"nevergrad",
                 #"L-BFGS-B",
                 monitor_list=[sim["eps"], sim["field"], sim["overlap"], obj],
-                max_iters=20,  # total is therefore 60.
+                max_iters=20,  # total is therefore 60, as we try 3 different factors above.
                 name="opt_cont{}".format(factor))
 
         plan.save()
