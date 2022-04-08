@@ -4,13 +4,12 @@ Usage:
 
 Run optimization:
 
-    $ python wdm2.py run [save-folder]
+    $ python bend90.py run [save-folder]
 
 View results:
 
-    $ python wdm2.py view [save-folder]
+    $ python bend90.py view [save-folder]
 """
-
 import os
 import pickle
 
