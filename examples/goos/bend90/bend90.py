@@ -11,8 +11,6 @@ View results:
     $ python wdm2.py view [save-folder]
 """
 
-extent40 = 40
-
 import os
 import pickle
 
@@ -53,7 +51,7 @@ def main(save_folder: str,
                 initializer=initializer,
                 pos=goos.Constant([0, 0, 0]),
                 extents=[2000, 2000, 220],
-                pixel_spacing=extent40,
+                pixel_spacing=40,
                 control_point_spacing=0.5 * min_feature,
                 #control_point_spacing=1.5 * min_feature,
                 material=goos.material.Material(index=1),
@@ -66,7 +64,7 @@ def main(save_folder: str,
                 extents=[2000, 2000, 220],
                 material=goos.material.Material(index=1),
                 material2=goos.material.Material(index=3.45),
-                pixel_size=[extent40, extent40, 220],
+                pixel_size=[40, 40, 220],
                 var_name="var_cont")
 
         sigmoid_factor = goos.Variable(4, parameter=True, name="discr_factor")
@@ -78,7 +76,7 @@ def main(save_folder: str,
         eps_rendered = maxwell.RenderShape(
             design,
             region=goos.Box3d(center=[0, 0, 0], extents=[3000, 3000, 0]),
-            mesh=maxwell.UniformMesh(dx=extent40),
+            mesh=maxwell.UniformMesh(dx=40),
             wavelength=1550,
         )
         if visualize:
@@ -173,23 +171,15 @@ def visualize(folder: str, step: int):
     plt.figure()
     plt.subplot(1, 2, 1)
     eps = np.linalg.norm(data["monitor_data"]["sim_cont.eps"], axis=0)
-    print(eps)
-    print(eps.shape)
-    print(np.max(eps))
-    print(np.median(eps))
-    values = np.array(eps.flatten(), dtype=int)
-    for u in np.unique(values):
-        print(u, np.sum(values==u))
-    print(np.min(eps))
     plt.imshow(eps[:, :, eps.shape[2] // 2].squeeze())
     plt.colorbar()
     plt.subplot(1, 2, 2)
     field_norm = np.linalg.norm(data["monitor_data"]["sim_cont.field"], axis=0)
     plt.imshow(field_norm[:, :, field_norm.shape[2] // 2].squeeze())
     plt.colorbar()
-    #plt.show()
     plt.savefig("output.png")
-
+    #plt.show()
+    
 
 if __name__ == "__main__":
     import argparse
