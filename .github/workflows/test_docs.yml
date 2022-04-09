@@ -5,7 +5,6 @@ on:
   push:
   schedule:
     - cron: "0 2 * * *" # run at 2 AM UTC
-    -
 
 jobs:
   build-linux:
@@ -21,7 +20,7 @@ jobs:
           python-version: 3.9
       - name: Install dependencies
         run: |
-          pip install .
+          make install
           sudo apt install pandoc
       - name: Test documentation
         run: |
