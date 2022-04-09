@@ -225,5 +225,5 @@ def get_rendering_matrix_1d(shape_coord, grid_coord):
         shape=(len(grid_coord) - 1, len(shape_coord) - 1))
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     pass

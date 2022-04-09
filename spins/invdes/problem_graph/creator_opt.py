@@ -520,7 +520,7 @@ def create_cont_to_disc_thresholding(
 
     Args:
         params: Optplan parameters of conttodisc_threshold.
-        work: Workspace of the transformation. 
+        work: Workspace of the transformation.
     """
     cont_param = work.get_object(params.continuous_parametrization)
     return ContToDiscThresholding(

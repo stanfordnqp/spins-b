@@ -12,4 +12,3 @@ Invdes
 
    examples
 .. goos/impl-details
-

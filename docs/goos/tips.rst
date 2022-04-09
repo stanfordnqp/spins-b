@@ -11,4 +11,3 @@ Quick Visualization
 
 Debugging Optimization Plans
 ----------------------------
-

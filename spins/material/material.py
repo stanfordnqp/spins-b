@@ -64,7 +64,7 @@ class CustomMaterial(Material):
 
     def __init__(self, wlens: List[float], n: List[float], k: List[float]):
         """Constructor to initialize material properties.
-        
+
         Args:
             wlens: Known wavelength data.
             n: Known refractive indices.

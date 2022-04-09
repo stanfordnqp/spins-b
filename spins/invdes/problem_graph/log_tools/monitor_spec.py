@@ -22,7 +22,7 @@ class MonitorDescription(schema_utils.Model):
         monitor_type: String describing the type of data contained in the monitor.
         scalar_operation: String specifying how to process scalar monitor data.
         vector_operation: String specifying how to process planar monitor data.
-    
+
     If both scalar_operation and vector_operation are specified, the vector_operation
         is performed first and then the scalar operation is performed.
     """

@@ -60,7 +60,7 @@ To get text-only output , run :code:`view_quick` instead:
 
 
 Generate GDS
-************ 
+************
 
 A GDS file (named :code:`grating.gds`) is automatically generated in the :code:`save-folder-name` at the end of an optimization.
 
@@ -124,9 +124,9 @@ The substrate and buried oxide layer are first set:
         ),
     ]
 
-and so adjusting the :code:`box_thickness` earlier is the only change we need to make. As for the grating coupler, we look at the elements appended to this stack array below. Pre-defined materials in Spins-B are :code:`"Air"`, :code:`"SiO2"`, :code:`"Si"`, :code:`"Si3N4"`. For greatest generality, we'll define a custom material for the silicon nitride in this example where we set the real part of the index to be 2.0 and the imaginary (loss) to be 0.0. 
+and so adjusting the :code:`box_thickness` earlier is the only change we need to make. As for the grating coupler, we look at the elements appended to this stack array below. Pre-defined materials in Spins-B are :code:`"Air"`, :code:`"SiO2"`, :code:`"Si"`, :code:`"Si3N4"`. For greatest generality, we'll define a custom material for the silicon nitride in this example where we set the real part of the index to be 2.0 and the imaginary (loss) to be 0.0.
 
-.. note:: 
+.. note::
 
     In addition to specifying a single refractive index value, a custom material can be added as well which interpolates dispersion from provided data. Reference :code:`optplan.Material` for more information.
 
@@ -160,7 +160,7 @@ In addition, we change the background material to be :code:`"Air"` as our gratin
         stack=stack,
     )
 
-.. note:: 
+.. note::
 
     You can set the :code:`visualize` flag in the :code:`create_sim_space` function to :code:`True` to visualize the material stack to ensure it has been built correctly.
 
@@ -180,14 +180,14 @@ We set the partial etch depth earlier, but to re-iterate, we can adjust this val
             wg_thickness=wg_thickness,
             etch_frac=0.6,
             wg_width=wg_width)
-    
+
 We see reference to :code:`grating_len` here, and accordingly this variable can be adjusted as well. This is set at the bottom of the example file in the :code:`__main__` function call:
 
 .. code-block:: python
 
     if __name__ == "__main__":
         import argparse
-    
+
         parser = argparse.ArgumentParser()
         parser.add_argument(
             "action",
@@ -197,10 +197,10 @@ We see reference to :code:`grating_len` here, and accordingly this variable can 
             "\"gen_gds\" to generate the grating GDS file.")
         parser.add_argument(
             "save_folder", help="Folder containing optimization logs.")
-    
+
         grating_len = 12000
         wg_width = 12000
-    
+
 
 Source parameters
 *****************
@@ -214,10 +214,10 @@ In this function, wavelength is set by simply adjusting the :code:`wlen` variabl
     wlen = 1300
 
 
-.. note:: 
+.. note::
 
     Another location where wavelength is referenced is for plotting the permitvitty for visualization. If desired, adjust the wavelength argument in the :code:`create_sim_space` function at the bottom:
-    
+
     .. code-block:: python
 
         if visualize:
@@ -225,10 +225,10 @@ In this function, wavelength is set by simply adjusting the :code:`wlen` variabl
             # construct the simulation space object.
             import matplotlib.pyplot as plt
             from spins.invdes.problem_graph.simspace import get_fg_and_bg
-    
+
             context = workspace.Workspace()
             eps_fg, eps_bg = get_fg_and_bg(context.get_object(simspace), wlen=1550)
-    
+
 
 and then geometric properties of the beam are set by modifying the :code:`GaussianSource` argument in the sim object:
 
@@ -254,7 +254,7 @@ and then geometric properties of the beam are set by modifying the :code:`Gaussi
 
 For this modification, the only change we want is normal incidence (:code:`theta = np.deg2rad(0)`). However, here we can also change the beam-width by adjusting the w0 parameter. Note,:code:` w0` is separate from :code:`extents`, where the former is the beam radius and the latter is the extent over which the source is defined.
 
-.. note:: 
+.. note::
 
     The code supports arbitrary rotation of the source. With :code:`psi = np.pi/2` and :code:`polarization_angle = 0`, the polarization is set to be parallel to the grating lines and :code:`theta` controls the angle of incidence.
 
@@ -264,7 +264,7 @@ For this modification, the only change we want is normal incidence (:code:`theta
 
         Explanation of source angle rotation parameters.
 
-    
+
 
 Optimization parameters
 ***********************
@@ -282,7 +282,7 @@ Optimization parameters are set in the :code:`create_transformation` function wi
             min_feature: float = 100,
             cont_to_disc_factor: float = 1.1,
     ) -> List[optplan.Transformation]:
-    
+
 Accordingly, to change the number of continuous or discrete optimzation iterations we adjust this argument where this function is called in the run_opt function:
 
 .. code-block:: python
@@ -292,7 +292,7 @@ Accordingly, to change the number of continuous or discrete optimzation iteratio
 
 Likewise, the minimum feature size in the optimization is set here as well.
 
-note:: 
+note::
 
     Spins-B utilizes continuous relaxation in optimization. This means that there is a first stage of optimization where the device permittivity is allowed to vary continuously between the material/cladding value. This final result of this stage acts as a seed for the discrete optimization. In this second stage, a fabricable design is produced. In our experience, 100 iterations for each stage is sufficient to reach a local minima.
 
@@ -314,7 +314,7 @@ The 1D optimized design is simply extruded to provide a 2D design. The extrude l
 
     if __name__ == "__main__":
         import argparse
-    
+
         parser = argparse.ArgumentParser()
         parser.add_argument(
             "action",
@@ -324,7 +324,7 @@ The 1D optimized design is simply extruded to provide a 2D design. The extrude l
             "\"gen_gds\" to generate the grating GDS file.")
         parser.add_argument(
             "save_folder", help="Folder containing optimization logs.")
-    
+
         grating_len = 12000
         wg_width = 12000
 
@@ -338,7 +338,7 @@ Minimizing back reflections is set by simply turning on the flag at the beginnin
 
     # If `True`, also minimize the back-reflection.
     MINIMIZE_BACKREFLECTION = True
-    
+
 Setting this flag to :code:`True` activates:
 
 .. code-block:: python
@@ -370,7 +370,7 @@ Setting this flag to :code:`True` activates:
 
 We see that we create an additional simulation object which performs the simulation for :code:`WaveguideModeSource` instead of the :code:`GaussianSource` from before. We then add the overlap monitor for the reflected power, :code:`refl_power` with the :code:`power` monitor for transmission to form the complete objective function, :code:`obj`.
 
-.. note:: 
+.. note::
     The coefficient on :code:`4 * refl_power` is a value that we found worked for our test example; however this is a meta-parameter that must be set for specific problems. Setting the value to :code:`4` may be a good starting point, and tweaked based on desired performance.
 
 

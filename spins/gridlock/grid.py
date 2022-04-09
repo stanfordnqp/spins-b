@@ -20,16 +20,16 @@ class Grid:
     is generated based on the coordinates of the boundary points). Also does
     straightforward natural <-> grid unit conversion.
 
-    The Grid object must be specified with shifts that generate the primary grid and a 
-    complementary grid from grid specified by the coordinates of the boundary points. In the 
+    The Grid object must be specified with shifts that generate the primary grid and a
+    complementary grid from grid specified by the coordinates of the boundary points. In the
     context of EM simulations, the primary grid is the E-field grid and the complementary
-    grid is the H-field grid. More formally, the primary grid should have vertices at the 
-    body-centers of the complementary grid and vice-versa. This relationship between the 
+    grid is the H-field grid. More formally, the primary grid should have vertices at the
+    body-centers of the complementary grid and vice-versa. This relationship between the
     primary and complementary grid is assumed while aliasing the drawn structures onto the grid
 
     Objects on the grid can be drawn via the draw_ functions (e.g. draw_cuboid, draw_cylinder,
-    draw_slab). Once all the objects have been drawn on the grid, the render() function can be 
-    called to raster the drawn objects on the grid. It is assumed that the object drawn latest is 
+    draw_slab). Once all the objects have been drawn on the grid, the render() function can be
+    called to raster the drawn objects on the grid. It is assumed that the object drawn latest is
     the correct object and should replace any of the older objects being drawn in case of an intersection
     with the older objects.
 
@@ -134,7 +134,7 @@ class Grid:
         Returns edges for which_shifts.
 
         :param which_shifts: Which grid (which shifts) to use, or None for unshifted
-        :param which_grid: GridType.PRIM for the primary grid and GRIDTYPE.COMP for the complementary grid 
+        :param which_grid: GridType.PRIM for the primary grid and GRIDTYPE.COMP for the complementary grid
         :return: List of 3 ndarrays of cell edges
         """
         if which_shifts is None:
@@ -469,7 +469,7 @@ class Grid:
                      thickness: float, eps: float or List[float]):
         """
         Draws a polygon with coordinates in polygon and thickness
-        Note on order of coordinates in polygon - 
+        Note on order of coordinates in polygon -
         If ext_dir = x, then polygon has coordinates of form (y,z)
            ext_dir = y, then polygon has coordinates of form (x,y)
            ext_dir = z, then polygon has coordinates of form (x,y)
@@ -549,7 +549,7 @@ class Grid:
         """
         Draw a cylinder with permittivity epsilon. By default, the axis of the cylinder
         is assumed to be along the extrusion direction
-        
+
         """
         center = np.array(center)
         # Validating input parameters
@@ -680,7 +680,7 @@ class Grid:
     def compute_layers(self):
         """
         Function to break the structure into different layers
-        
+
         OUTPUT: Takes the set of polygons, which may be drawn at displaced z coordinates
         and breaks them into layers which can then be seperately be rendered
         """
@@ -700,7 +700,7 @@ class Grid:
         """
         Function to remove polygon intersections
         We assume that the material drawn at the end is the desired material
-        
+
         OUTPUT: Converts the set of objects specified by the user into another
         set of objects which do NOT intersect with each other
         """
@@ -709,7 +709,7 @@ class Grid:
             '''
             Helper function to perform a simple check if the bounding box of
             polygon_1 and polygon_2 do not intersect
-            
+
             This is mainly to avoid computing intersections if the two polygons
             are very far from each other, in order to speed up the reduction process
             '''
@@ -728,7 +728,7 @@ class Grid:
         def compute_intersection(polygon_1, polygon_2):
             '''
             Wrapper function around the gdspy module to take as input
-            two polygons and return polygon_1-polygon_2 
+            two polygons and return polygon_1-polygon_2
             Explicit NOT operation is only performed if the bounding boxes
             of the two polygons do not intersect.
             '''
@@ -775,12 +775,12 @@ class Grid:
                        eps: np.ndarray):
         """
         Function to render grid with contribution due to polygon 'polygon'.
-        
+
         INPUTS:
         polygon - list of (x,y) vertices of the polygon being rendered
         z_extent - extent (z_1, z_2) along the extrusion direction of the polygon being rendered
         eps - permittivity of the polygon being rendered
-        
+
         OUTPUTS:
         updates self.grids with the properly aliased polygon permittivity
         reduces self.frac_bg by the fraction of space occupied by the polygon 'polygon'
@@ -916,16 +916,16 @@ class Grid:
     def render(self, disable_intersection: bool = False):
         """
         Function to render the added polygons to the specified grid
-        
+
         INPUTS:
-        1. disable_intersection - set this flag to True if you are 
+        1. disable_intersection - set this flag to True if you are
         sure that the polygons that you draw do not intersect with each other.
-        The intersection removal process will not be performed, and direct rastering of 
+        The intersection removal process will not be performed, and direct rastering of
         the polygons onto the grid will be performed. Note that one polygon completely
         being inside the other counts as an intersection. This might speed up the
-        drawing functions if you are drawing a large number of polygons (for e.g. in a 
+        drawing functions if you are drawing a large number of polygons (for e.g. in a
         photonic crystal)
-        
+
         OUTPUTS: Renders all the drawn polygons onto the grid
         There are three steps to rendering the grid
         1. Computing the layers along the z-direction

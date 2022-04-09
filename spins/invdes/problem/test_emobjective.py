@@ -10,7 +10,7 @@ import spins.fdfd_tools as fdfd_tools
 
 
 class SimpleEmObjective(EmObjective):
-    """ A simple 1D EM objective design to test the adjoint calculation. 
+    """ A simple 1D EM objective design to test the adjoint calculation.
 
     The objective is a field-matching objective:
     f(x) = |x - target_efields|^2

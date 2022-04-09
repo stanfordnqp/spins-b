@@ -68,7 +68,7 @@ def e_full(omega: complex,
         The PMC is applied per-field-component (ie, pmc.size == epsilon.size)
     :param bloch_vec: bloch vector [kx,ky,kz]
     :shift_orthogonal: shifts orthogonal to the axis directions to be taken into
-                        account when applying periodc boundary conditions (the 
+                        account when applying periodc boundary conditions (the
                         diagonal can only contain zeros)
     :return: Sparse matrix containing the wave operator
     """
@@ -150,7 +150,7 @@ def h_full(omega: complex,
         The PMC is applied per-field-component (ie, pmc.size == epsilon.size)
     :param bloch_vec: bloch vector [kx,ky,kz]
     :shift_orthogonal: shifts orthogonal to the axis directions to be taken into
-                        account when applying periodc boundary conditions (the 
+                        account when applying periodc boundary conditions (the
                         diagonal can only contain zeros)
     :return: Sparse matrix containing the wave operator
     """
@@ -208,7 +208,7 @@ def eh_full(omega: complex,
         The PMC is applied per-field-component (ie, pmc.size == epsilon.size)
     :param bloch_vec: bloch vector [kx,ky,kz]
     :shift_orthogonal: shifts orthogonal to the axis directions to be taken into
-                        account when applying periodc boundary conditions (the 
+                        account when applying periodc boundary conditions (the
                         diagonal can only contain zeros)
     :return: Sparse matrix containing the wave operator
     """
@@ -247,7 +247,7 @@ def curl_h(dxes: dx_lists_t,
     :param dxes: Grid parameters [dx_e, dx_h] as described in fdfd_tools.operators header
     :param bloch_vec: bloch vector [kx,ky,kz]
     :shift_orthogonal: shifts orthogonal to the axis directions to be taken into
-                        account when applying periodc boundary conditions (the 
+                        account when applying periodc boundary conditions (the
                         diagonal can only contain zeros)
     :return: Sparse matrix for taking the discretized curl of the H-field
     """
@@ -266,7 +266,7 @@ def curl_e(dxes: dx_lists_t,
     :param dxes: Grid parameters [dx_e, dx_h] as described in fdfd_tools.operators header
     :param bloch_vec: bloch vector [kx,ky,kz]
     :shift_orthogonal: shifts orthogonal to the axis directions to be taken into
-                        account when applying periodc boundary conditions (the 
+                        account when applying periodc boundary conditions (the
                         diagonal can only contain zeros)
     :return: Sparse matrix for taking the discretized curl of the E-field
     """
@@ -294,7 +294,7 @@ def e2h(omega: complex,
         The PMC is applied per-field-component (ie, pmc.size == epsilon.size)
     :param bloch_vec: bloch vector [kx,ky,kz]
     :shift_orthogonal: shifts orthogonal to the axis directions to be taken into
-                        account when applying periodc boundary conditions (the 
+                        account when applying periodc boundary conditions (the
                         diagonal can only contain zeros)
     :return: Sparse matrix for converting E to H
     """
@@ -329,7 +329,7 @@ def h2e(omega: complex,
         The PMC is applied per-field-component (ie, pmc.size == epsilon.size)
     :param bloch_vec: bloch vector [kx,ky,kz]
     :shift_orthogonal: shifts orthogonal to the axis directions to be taken into
-                        account when applying periodc boundary conditions (the 
+                        account when applying periodc boundary conditions (the
                         diagonal can only contain zeros)
     :return: Sparse matrix for converting H to E
     """
@@ -360,7 +360,7 @@ def m2j(omega: complex,
     :param dxes: Grid parameters [dx_e, dx_h] as described in fdfd_tools.operators header
     :param mu: Vectorized magnetic permeability (default 1 everywhere)
     :shift_orthogonal: shifts orthogonal to the axis directions to be taken into
-                        account when applying periodc boundary conditions (the 
+                        account when applying periodc boundary conditions (the
                         diagonal can only contain zeros)
     :return: Sparse matrix for converting E to H
     """
@@ -488,7 +488,7 @@ def rotation_bloch(axis: int,
     :param axis: Axist to shift along. x = 0, y = 1, z = 2
     :param shape: Shape of the grid being shifted
     :param bloch_phase: bloch vector component along axis multiplied by length of simulation region
-    :param shift_distance: Number of cells to shift by. May be negative. Defautl is 1 
+    :param shift_distance: Number of cells to shift by. May be negative. Defautl is 1
     :return sparse matrix for performing the circular shift
     '''
     if len(shape) not in (2, 3):
@@ -611,9 +611,9 @@ def rotation_bloch_shift(axis: int,
     :param axis: Axist to shift along. x = 0, y = 1, z = 2
     :param shape: Shape of the grid being shifted
     :param bloch_phase: bloch vector component along axis multiplied by length of simulation region
-    :param shift_distance: Number of cells to shift by. May be negative. Defautl is 1 
+    :param shift_distance: Number of cells to shift by. May be negative. Defautl is 1
     :shift_orthogonal: shifts orthogonal to the axis directions to be taken into
-                        account when applying periodc boundary conditions (the 
+                        account when applying periodc boundary conditions (the
                         diagonal can only contain zeros)
     :return sparse matrix for performing the circular shift
     '''
@@ -664,7 +664,7 @@ def deriv_forward_shift(dx_e: List[np.ndarray],
     :param dx_e: Lists of cell sizes for all axes [[dx_0, dx_1, ...], ...].
     :param bloch_vec: bloch vector - [kx,ky,kz]
     :shift_orthogonal: shifts orthogonal to the axis directions to be taken into
-                        account when applying periodc boundary conditions (the 
+                        account when applying periodc boundary conditions (the
                         diagonal can only contain zeros)
     :return: List of operators for taking forward derivatives along each axis.
     """
@@ -701,7 +701,7 @@ def deriv_back_shift(dx_h: List[np.ndarray],
     :param dx_h: Lists of cell sizes for all axes [[dx_0, dx_1, ...], ...].
     :param bloch_vec: bloch vector - [kx, ky, kz]
     :shift_orthogonal: shifts orthogonal to the axis directions to be taken into
-                        account when applying periodc boundary conditions (the 
+                        account when applying periodc boundary conditions (the
                         diagonal can only contain zeros)
     :return: List of operators for taking forward derivatives along each axis.
     """

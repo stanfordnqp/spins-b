@@ -176,5 +176,3 @@ class ContToDiscThresholding(optplan.TransformationBase):
     type = schema_utils.polymorphic_model_type("cont_to_disc_thresholding")
     continuous_parametrization = optplan.ReferenceType(optplan.Parametrization)
     threshold = types.FloatType()
-
-

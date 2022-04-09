@@ -291,4 +291,3 @@ def test_gaussian_source_2d():
 if __name__ == "__main__":
     # test_simulate_wg_opt()
     test_simulate_wg_opt_grad()
-

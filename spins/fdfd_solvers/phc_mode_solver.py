@@ -18,13 +18,13 @@ def efield_operator(bloch_vec, dxes: dx_lists_t, epsilon: vfield_t,
       (1/sqrt(epsilon))*nabla x nabla x (1/sqrt(epsilon))v = omega^2 v
 
     where E = sqrt(epsilon) v and omega is the eigen-frequency
-    
+
     INPUTS:
     bloch_vec - bloch vector
     dxes - grid dx
     epsilon - permittivity vector
     mu - permeability vector (assumed to be 1)
-    TODO (rahul) - factor in permeability 
+    TODO (rahul) - factor in permeability
 
     OUTPUTS:
     op - operator to solve
@@ -55,7 +55,7 @@ def hfield_operator(bloch_vec, dxes: dx_lists_t, epsilon: vfield_t,
       nabla x nabla x (1/sqrt(epsilon))v = omega^2 v
 
     where E = sqrt(epsilon) v and omega is the eigen-frequency
-    
+
     INPUTS:
     bloch_vec - bloch vector
     dxes - grid dx

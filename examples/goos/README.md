@@ -8,12 +8,12 @@ Colab is short for Colaboratory and it is google's platform for writing and exec
 
 ### How do I run the spins-b colab notebooks?
 
-1. Download SPINS using the 'Download' ZIP on spins-b github at https://github.com/stanfordnqp/spins-b. Unzip the zip file to access the spins-b folder. 
+1. Download SPINS using the 'Download' ZIP on spins-b github at https://github.com/stanfordnqp/spins-b. Unzip the zip file to access the spins-b folder.
 Alternatively, you can also download SPINS by git clone:
 $ git clone http://github.com/stanfordnqp/spins-b
 
-2. Upload this spins-b folder you have just downloaded onto your google drive. You can choose what folder on your google drive you upload to (although it is easier if you just upload it to your `My Drive` folder if you can). 
-3. Open a colab notebook by navigating in your google drive to  `spins-b/examples/interactive_colab`, double clicking on either of the `.ipynb` notebooks here, and clicking `Open with Google Colaboratory`. 
-4. If you have uploaded `spins-b` in a subfolder of your `My Drive` folder, copy the path to this folder to the `folder_name` variable in the first cell of the colab notebook. 
+2. Upload this spins-b folder you have just downloaded onto your google drive. You can choose what folder on your google drive you upload to (although it is easier if you just upload it to your `My Drive` folder if you can).
+3. Open a colab notebook by navigating in your google drive to  `spins-b/examples/interactive_colab`, double clicking on either of the `.ipynb` notebooks here, and clicking `Open with Google Colaboratory`.
+4. If you have uploaded `spins-b` in a subfolder of your `My Drive` folder, copy the path to this folder to the `folder_name` variable in the first cell of the colab notebook.
 5. Run the second cell of the colab notebook to install spins-b and all its dependencies.
 6. Run the rest of the cells - everything else should run at this point.
