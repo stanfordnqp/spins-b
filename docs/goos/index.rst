@@ -11,5 +11,3 @@ Goos
    extending
    advanced
 .. goos/impl-details
-
-

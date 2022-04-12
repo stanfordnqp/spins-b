@@ -7,7 +7,7 @@ the past decade at Jelena Vuckovic's `Nanoscale and Quantum Photonics Lab <http:
 at Stanford University. For commercial use, the full version can be licensed
 through the `Stanford Office of Technology and Licensing <http://techfinder.stanford.edu/technologies/S18-012_inverse-design-software-for>`_ (see FAQ).
 
-The overall architecture is explained in our paper `Nanophotonic Inverse Design with SPINS: Software Architecture and Practical Considerations <https://arxiv.org/abs/1910.04829>`_. 
+The overall architecture is explained in our paper `Nanophotonic Inverse Design with SPINS: Software Architecture and Practical Considerations <https://arxiv.org/abs/1910.04829>`_.
 
 
 Features

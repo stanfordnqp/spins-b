@@ -88,7 +88,7 @@ class MaxwellSolver:
                  err_thresh=DEFAULT_ERROR_THRESHOLD,
                  max_iters=DEFAULT_MAX_ITERS,
                  solver='CG'):
-        """ Construct MaxwellFDFD solver. 
+        """ Construct MaxwellFDFD solver.
 
         Args:
             shape: Shape of simulation domain in grid units.

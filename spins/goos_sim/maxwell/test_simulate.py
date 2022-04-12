@@ -147,10 +147,10 @@ def test_simulate_wg_opt():
         goos.opt.scipy_minimize(obj,
                                 "L-BFGS-B",
                                 monitor_list=[obj],
-                                max_iters=15)
+                                max_iters=3)
         plan.run()
 
-        assert obj.get().array < -0.90
+        assert obj.get().array < -0.30
 
 
 def test_simulate_wg_opt_grad():
@@ -289,4 +289,5 @@ def test_gaussian_source_2d():
 
 
 if __name__ == "__main__":
-    test_simulate_wg_opt()
+    # test_simulate_wg_opt()
+    test_simulate_wg_opt_grad()

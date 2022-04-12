@@ -183,20 +183,20 @@ def make_nonuniform_grid(SimBorders: List[int],
                          step=1.0) -> (np.array, np.array, np.array):
     '''
     make_nonuniform_grid makes x, y, z vector for a non-uniform grid. In
-    addition to the simulation boundaries and the default dx, you can add boxes 
-    where you want a finer mesh. The mesh will change gradually by grad_Mesh. 
+    addition to the simulation boundaries and the default dx, you can add boxes
+    where you want a finer mesh. The mesh will change gradually by grad_Mesh.
     (a grad_Mesh larger then 1 does not make any sense)
 
     input:
-        - SimBorders: the boundaries of your simulation in the form 
+        - SimBorders: the boundaries of your simulation in the form
                         [xmin xmax ymin ymax zmin zmax]
         - dx_default: the largest mesh allowed (a 3 element np.array)
         - Boxes: List of dicts that define finer mesh boxes
-            These have 'pos' (a 3 element np.array), 'size' (a 3 
+            These have 'pos' (a 3 element np.array), 'size' (a 3
             element np.array) and 'meshsize' the meshsize
         - The grad_Mesh (by default 0.05)
-        - step: the minimum mesh size is first calculated on a fine grid in 
-            the x,y and z direction. Step is the mesh size of this vector. It 
+        - step: the minimum mesh size is first calculated on a fine grid in
+            the x,y and z direction. Step is the mesh size of this vector. It
             should be significantly smaller than the mesh size of the boxes
 
     output:

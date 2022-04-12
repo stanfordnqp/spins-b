@@ -17,6 +17,7 @@
 *.pkl
 .ignore/
 .pytest_cache/
+extra/
 
 __pycache__/
 *.py[cod]

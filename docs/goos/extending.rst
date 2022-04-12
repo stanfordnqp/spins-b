@@ -142,7 +142,7 @@ second argument in `grad`:
       ...
 
       def grad(self, input_vals: List[goos.NumericFlow],
-                     grad_val: goos.NumericFlow.Grad) 
+                     grad_val: goos.NumericFlow.Grad)
                      -> List[goos.NumericFlow.Grad]:
         x = input_vals[0].array
         y = input_vals[1].array

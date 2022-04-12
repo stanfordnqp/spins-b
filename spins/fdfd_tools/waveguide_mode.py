@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 import numpy as np
 import scipy.sparse as sparse
 import scipy.sparse.linalg as spalg
@@ -36,7 +36,7 @@ def solve_waveguide_mode_2d(mode_number: int,
     # check if eps has a imaginary part
     if (np.imag(epsilon)!=0).any():
         warnings.warn('Epsilon in 2D mode solver has an imaginary part'
-            )   
+            )
 
     dxes_real = [[np.real(dx) for dx in dxi] for dxi in dxes]
 

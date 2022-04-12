@@ -205,7 +205,7 @@ class AdjointFdfdSimulation:
          We then multiply sim.J by (R* R*) = diag(1./s)*, obtaining
           (R* A' L*) v = (L* (R* R* b))
                        = (R* b)
-         and then fix the returned value v by multiplying by 
+         and then fix the returned value v by multiplying by
           (L* L*) = diag(s)
          leading to the result (L* L* v) = (L* L* (R* x)) = L* x
 

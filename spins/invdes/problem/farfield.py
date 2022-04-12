@@ -3,8 +3,8 @@ Functions for far field analysis
 
 In part of the code for the far field calculation and in the analysis functions
 spherical coordinates are used. Theta is the angle with the z-axis (axis=2)
-and varies from 0 to pi. Phi is the angle of the projection on the xy-plane 
-with the x-axis. It varies between -pi and pi. (note however that for the 
+and varies from 0 to pi. Phi is the angle of the projection on the xy-plane
+with the x-axis. It varies between -pi and pi. (note however that for the
 analysis function triangle_selection it can be any angle)
 
 """
@@ -34,7 +34,7 @@ def make_near2farfield_matrix(points: np.array,
                               mu_0=1.0,
                               spherical_axis=2) -> sparse.spmatrix:
     '''
-    This function returns a matrix that transforms the fields on a plane 
+    This function returns a matrix that transforms the fields on a plane
     defined by pos and width to the farfield.
     The fields are calculated on a sphere centered in the origin.
 
@@ -44,7 +44,7 @@ def make_near2farfield_matrix(points: np.array,
     - grid: the grid object of the simulation
     - dxes: the dxes of the simulation
     - pos: center position of the plane you want to project out
-    - width: size of the plane, (the normal vector is calculated based on 
+    - width: size of the plane, (the normal vector is calculated based on
                 the 0 value of this vector, e.g. if the width is [100,0,100] the
                 normal is [0,1,0])
     - polarity: direction in which you want to project
@@ -52,7 +52,7 @@ def make_near2farfield_matrix(points: np.array,
     - mu_0
     - spherical_axis: orientation of the spherical coordinate system
     output:
-    - sparse tranformation matrix 
+    - sparse tranformation matrix
 
     '''
     # prepare normal
@@ -149,7 +149,7 @@ def make_near2farfield_box_matrix(points: np.array,
     '''
     This function returns a matrix that projects fields on a box
     to the farfield.
-    (the far field matrices of all the sides of the box are calculated and 
+    (the far field matrices of all the sides of the box are calculated and
     summed)
 
     input:
@@ -161,10 +161,10 @@ def make_near2farfield_box_matrix(points: np.array,
     - box_size: size of the box
     - eps_0
     - mu_0
-    - spherical_axis: how the spherical coordinate system is oriented 
-            (defaut=z-axis) 
+    - spherical_axis: how the spherical coordinate system is oriented
+            (defaut=z-axis)
     output:
-    - tranformation matrix: sparse matrix 
+    - tranformation matrix: sparse matrix
 
     '''
     #x0
@@ -274,8 +274,8 @@ def fields_on_slice(xs: np.array, ys: np.array, zs: np.array, dxes,
                     x_slice: slice, y_slice: slice, z_slice: slice
                    ) -> (np.array, np.array, np.array, sparse.spmatrix):
     '''
-    make a matrix that makes only keeps the fields defined by some slices. 
-    
+    make a matrix that makes only keeps the fields defined by some slices.
+
     input:
     - xs, ys, zs: vectors of the large grid
     - x_slice, y_slice, z_slice: slices defining the region want to keep
@@ -283,7 +283,7 @@ def fields_on_slice(xs: np.array, ys: np.array, zs: np.array, dxes,
     output:
     - crop_x, crop_y, crop_z: vectors of the new grid
     - Crop_matrix_fields: sparse matrix that keeps the field in the new region
-    
+
     '''
 
     x, y, z = np.meshgrid(xs, ys, zs, indexing='ij')
@@ -325,13 +325,13 @@ def fields_on_slice(xs: np.array, ys: np.array, zs: np.array, dxes,
 def move2H_matrix(axis: int,
                   shape: List[int]) -> (sparse.spmatrix, sparse.spmatrix):
     '''
-    This function make 2 matrices that interpolate the E and H field to the 
-    position of 
+    This function make 2 matrices that interpolate the E and H field to the
+    position of
     Hi in the Yee cell, where i is the axis given
 
     input:
     - axis: the axis of the H vector you want to move to
-    - shape: shape of the simulation grid 
+    - shape: shape of the simulation grid
     output:
     - mv_E: transformation matrix that moves the E fields
     - mv_H: transformatino matrix that moves the H fields
@@ -388,17 +388,17 @@ def make_fourier_matrix(x: np.array, y: np.array, z: np.array, d_area: np.array,
                         x_ff: np.array, y_ff: np.array, z_ff: np.array,
                         omega: float) -> sparse.spmatrix:
     '''
-    fourier matrix: 
+    fourier matrix:
         fourier_matrix(i,0:)=exp(kx(i)*x+ky(i)*y+kz(i)*z)
 
-    input: 
+    input:
         - x, y, z: vector with all the x values vor every point (not a mesh vector)
         - d_area: area at the x, y, z positions
         - x_ff, y_ff, z_ff: point in the farfields
         - omega
     output:
         - fourier_matrix
-    
+
     '''
 
     r_ff = np.squeeze(x_ff**2 + y_ff**2 + z_ff**2)**0.5
@@ -429,18 +429,18 @@ def make_fourier_matrix(x: np.array, y: np.array, z: np.array, d_area: np.array,
 
 def make_sphere_point(interpolation_count: int) -> (np.array, np.array):
     '''
-    This function creates a sphere of relatively even distributed point. 
-    It start with all the unit vectors and then interpolates point on 
+    This function creates a sphere of relatively even distributed point.
+    It start with all the unit vectors and then interpolates point on
     a sphere in between these points. The more interpolation steps you take the
     points you will have. Typically 4 interpolation steps is enough.
-    
+
     input:
     - interpolation_count: the amount of interpolation steps
     output:
     - points: array with all the points
     - triangles: array with all the triangles that connect these point
             (these integer values refere to the points)
-    
+
     '''
 
     # Starting point for sphere
@@ -502,19 +502,19 @@ def make_sphere_point(interpolation_count: int) -> (np.array, np.array):
 def make_half_sphere_point(interpolation_count: int,
                            polarity: int) -> (np.array, np.array):
     '''
-    This function creates a half sphere of relatively even distributed point. 
-    It start with all the unit vectors and then interpolates point on 
+    This function creates a half sphere of relatively even distributed point.
+    It start with all the unit vectors and then interpolates point on
     a sphere in between these points. The more interpolation steps you take the
     points you will have. Typically 4 interpolation steps is enough.
-    
+
     input:
     - interpolation_count: the amount of interpolation steps
-    - polarity: 1 is z>0, -1 is z<0 
+    - polarity: 1 is z>0, -1 is z<0
     output:
     - points: array with all the points
     - triangles: array with all the triangles that connect these point
             (these integer values refere to the points)
-    
+
     '''
 
     # Starting point for sphere
@@ -570,8 +570,8 @@ def cart2spheric_matrix(x: np.array, y: np.array, z: np.array,
                         axis=2) -> sp.sparse.csr.csr_matrix:
     '''
     transformation matrix for vectors, for a cartesian to spherical coordinate
-    system. 
-    
+    system.
+
     input:
     - x, y, z positions
     output:
@@ -620,8 +620,8 @@ def spheric2cart_matrix(r: np.array, th: np.array, ph: np.array,
                         axis=2) -> sp.sparse.csr.csr_matrix:
     '''
     transformation matrix for vectors, for a cartesian to spherical coordinate
-    system. 
-    
+    system.
+
     input:
     - x, y, z positions
     output:
@@ -694,7 +694,7 @@ def get_jet_colors(x: float) -> np.array:
 
 def scatter_plot(ax, points: np.array, triangles: np.array, E2: np.array):
     '''
-    plots scatter data 
+    plots scatter data
     Note: The axis has to be made with mpl_toolkits.mplot3d.Axes3D
     '''
     # get the maximum value of E2
@@ -723,7 +723,7 @@ def points2triangles_averaging_matrix(points: np.ndarray,
                                       triangles: np.ndarray):
     '''
     gives a matrix that when multiplied with vector that has a value for every
-    point in points, it will produces a vector with the average value of every 
+    point in points, it will produces a vector with the average value of every
     triangle
     '''
     flatten = lambda l: [item for sublist in l for item in sublist]
@@ -740,7 +740,7 @@ def area_selection_vector(points: np.ndarray, triangles: np.ndarray,
                           bound_th: List[float],
                           bound_ph: List[float]) -> np.ndarray:
     '''
-    gives a vector that when multiplied with a vector that gives the value for 
+    gives a vector that when multiplied with a vector that gives the value for
     every triangle gives you the integration over a spacial region defined by
     bound_th and bound_ph
     '''
@@ -754,8 +754,8 @@ def triangle_selection_vector(points: np.ndarray, triangles: np.ndarray,
                               bound_th: List[float],
                               bound_ph: List[float]) -> np.ndarray:
     '''
-    Returns a vector with one entry per triangle. The ith entry is 1 if the 
-    center point of the ith triangle is located in the spatial region defined 
+    Returns a vector with one entry per triangle. The ith entry is 1 if the
+    center point of the ith triangle is located in the spatial region defined
     by bound_th and bound_ph; otherwise the ith entry is 0.
         (th values must be between 0 and pi, ph can be any value)
     '''

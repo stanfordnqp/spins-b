@@ -14,7 +14,7 @@ def average_2xFarEdge(grid_size, design_bounds):
      make the S-matrix for the full 3D grid. The 2D version of Sz
      consists of a bunch of 0-rows above and below a block-diagonal
      matrix. The blocks are a bunch of 0-rows surrounding an identity
-     matrix. The 0-rows create the y and x regions of the 
+     matrix. The 0-rows create the y and x regions of the
      simulation grid which are unaffected by the design vector.
     For Sx and Sy, we need to average nearby locations. For Sx, this just
      means altering the individual blocks to add a right-shifted I. For

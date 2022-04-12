@@ -23,12 +23,12 @@ from spins.invdes.problem import farfield
 class DirectedPower(EmObjective):
 
     def __init__(self, sim, grid, FF_cond, E_background=None):
-        """ Build an objective that evaluates the power projected in 
+        """ Build an objective that evaluates the power projected in
             far field.
 
             sim: simulation
             grid: grid used to make simulation
-            FF_cond: dictionary that contains th_bound and ph_bound. Both of 
+            FF_cond: dictionary that contains th_bound and ph_bound. Both of
             these are 2 element list that define the minimum and maximum angles
             over which you intregrate the power. (th is angle with the z-axis,
             ph is the angle in the xy-plane)
