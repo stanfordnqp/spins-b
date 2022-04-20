@@ -18,6 +18,9 @@
 .ignore/
 .pytest_cache/
 extra/
+build/
+dist/
+docs/_build/
 
 __pycache__/
 *.py[cod]

@@ -1,4 +1,6 @@
-[![image](https://travis-ci.com/stanfordnqp/spins-b.svg?branch=master)](https://travis-ci.com/stanfordnqp/spins-b)
+[![pypi](https://img.shields.io/pypi/v/spinsb)](https://pypi.org/project/spinsb/)
+[![black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stanfordnqp/spins-b/HEAD)
 
 [![image](https://codecov.io/gh/stanfordnqp/spins-b/branch/master/graph/badge.svg)](https://codecov.io/gh/stanfordnqp/spins-b)
 
@@ -19,8 +21,25 @@ Considerations](https://arxiv.org/abs/1910.04829).
 
 ## Documentation
 
-[Documentation](http://spins-b.readthedocs.io) is continually updated
-over time.
+[Documentation](http://spins-b.readthedocs.io) is continually updated over time.
+
+
+## Installation
+
+You can install from [pypi](https://pypi.org/project/spins/)
+
+```
+pip install spins
+```
+
+Or you can install the development version if you plan to contribute
+
+```
+git clone https://github.com/stanfordnqp/spins-b.git
+cd spins-b
+make install
+```
+
 
 ## Features
 

@@ -34,3 +34,14 @@ update:
 
 update2:
 	pre-commit autoupdate --bleeding-edge
+
+build:
+	python setup.py sdist bdist_wheel
+
+upload-devpi:
+	pip install devpi-client wheel
+	devpi upload --format=bdist_wheel,sdist.tgz
+
+upload-twine: build
+	pip install twine
+	twine upload dist/*

@@ -1,24 +1,6 @@
-Installation
+Solvers
 ============
 
-Requirements
-------------
-- Python 3.6+
-- Installation of a supported electromagnetic solver.
-
-
-Installation
-------------
-Simply download and install SPINS with `pip`, though we recommend using
-`virtual environments <https://docs.python.org/3.6/tutorial/venv.html>`_ to
-isolate your installation from your system.
-
-:command:`$ git clone http://github.com/stanfordnqp/spins-b`
-
-:command:`$ pip install ./spins-b`
-
-Solvers
--------
 SPINS is a framework for encoding and running optimization for electromagnetics.
 Although SPINS comes packaged with a finite-difference frequency-domain solver
 (FDFD) solver, you have a choice to install other simulators in the backend.
