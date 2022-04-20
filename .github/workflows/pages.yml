@@ -27,7 +27,6 @@ jobs:
       - name: Installing the library
         shell: bash -l {0}
         run: |
-          mkdir -p $HOME/.tidy3d
           pip install -e .
           sudo wget https://github.com/jgm/pandoc/releases/download/1.16.0.2/pandoc-1.16.0.2-1-amd64.deb
           sudo dpkg -i pandoc-1.16.0.2-1-amd64.deb
