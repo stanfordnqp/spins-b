@@ -1,7 +1,6 @@
-[![pypi](https://img.shields.io/pypi/v/spinsb)](https://pypi.org/project/spinsb/)
+[![pypi](https://img.shields.io/pypi/v/spins)](https://pypi.org/project/spins/)
 [![black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stanfordnqp/spins-b/HEAD)
-
 [![image](https://codecov.io/gh/stanfordnqp/spins-b/branch/master/graph/badge.svg)](https://codecov.io/gh/stanfordnqp/spins-b)
 
 # SPINS-B 0.0.2
