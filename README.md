@@ -11,7 +11,7 @@ a framework for gradient-based (adjoint) photonic optimization developed
 over the past decade at Jelena Vuckovic\'s [Nanoscale and Quantum
 Photonics Lab](http://nqp.stanford.edu) at Stanford University. The full
 version can be licensed through the [Stanford Office of Technology and
-Licensing](http://techfinder.stanford.edu/technologies/S18-012_inverse-design-software-for)
+Licensing](https://techfinder.stanford.edu/technology_detail.php?ID=42383)
 (see FAQ).
 
 The overall architecture is explained in our paper [Nanophotonic Inverse
