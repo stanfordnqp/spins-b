@@ -4,11 +4,11 @@ Usage:
 
 Run optimization:
 
-    $ python wdm2.py run [save-folder]
+    $ python bend90.py run [save-folder]
 
 View results:
 
-    $ python wdm2.py view [save-folder]
+    $ python bend90.py view [save-folder]
 """
 import os
 import pickle
@@ -23,6 +23,7 @@ from spins.invdes.problem_graph import optplan
 
 
 def main(save_folder: str,
+         method: str,
          min_feature: float = 100,
          use_cubic: bool = True,
          sim_3d: bool = False,
@@ -80,14 +81,15 @@ def main(save_folder: str,
             goos.util.visualize_eps(eps_rendered.get().array[2])
 
         obj, sim = make_objective(eps, "cont", sim_3d=sim_3d)
-
         for factor in [4, 6, 8]:
             sigmoid_factor.set(factor)
             goos.opt.scipy_minimize(
                 obj,
-                "L-BFGS-B",
+                method,
+                #"nevergrad",
+                #"L-BFGS-B",
                 monitor_list=[sim["eps"], sim["field"], sim["overlap"], obj],
-                max_iters=20,
+                max_iters=20,  # total is therefore 60, as we try 3 different factors above.
                 name="opt_cont{}".format(factor))
 
         plan.save()
@@ -173,8 +175,9 @@ def visualize(folder: str, step: int):
     field_norm = np.linalg.norm(data["monitor_data"]["sim_cont.field"], axis=0)
     plt.imshow(field_norm[:, :, field_norm.shape[2] // 2].squeeze())
     plt.colorbar()
-    plt.show()
-
+    plt.savefig("output.png")
+    #plt.show()
+    
 
 if __name__ == "__main__":
     import argparse
@@ -182,9 +185,10 @@ if __name__ == "__main__":
     parser.add_argument("action", choices=("run", "view"))
     parser.add_argument("save_folder")
     parser.add_argument("--step")
+    parser.add_argument("--method")
 
     args = parser.parse_args()
     if args.action == "run":
-        main(args.save_folder, visualize=False)
+        main(args.save_folder, method=args.method, visualize=False)
     elif args.action == "view":
         visualize(args.save_folder, args.step)

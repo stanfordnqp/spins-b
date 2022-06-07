@@ -9,6 +9,8 @@ from spins import goos
 from spins.goos import flows
 from spins.goos import graph_executor
 
+import sys
+
 
 class ScipyOptimizer(goos.Action):
     node_type = "goos.action.optimizer.scipy"
@@ -55,6 +57,7 @@ class ScipyOptimizer(goos.Action):
         self._method = method
         self._monitor_list = monitor_list
         self._iter = iteration
+        self.counter = 0
 
         # Convert options to a dictionary of keyword arguments for
         # `scipy.optimize.minimize`.
@@ -119,12 +122,34 @@ class ScipyOptimizer(goos.Action):
         def unpack_and_set(x):
             values = unpack(x)
             for var, value in zip(variables, values):
+                #print(f"we set {value.shape} {np.min(value)} {np.max(value)}", file=sys.stderr)
+                plan.set_var_value(var, value)
+
+        def unpack_and_set_binarized(x, threshold):
+            values = unpack(x)
+            for var, value in zip(variables, values):
+                #print(f"we set {value.shape} {np.min(value)} {np.max(value)}", file=sys.stderr)
+                value = np.array(value > threshold, dtype=value.dtype)
                 plan.set_var_value(var, value)
 
         def func(x):
             unpack_and_set(x)
             val = plan.eval_node(self._obj).array
+
+            # Checking the case with discretization, 16% of iterations.
+            self.counter = (self.counter + 1) % 6
+            if self.counter == 1:
+              if "evergr" in self._method:  # Nevergrad does not need discretization.
+                vals = [val] * 8
+              else:
+                vals = []
+                for u in range(1, 9):
+                    unpack_and_set_binarized(x, u/9.)
+                    vals += [plan.eval_node(self._obj).array]
+              print(f"we get value {val} {vals}    ({len(x)})", file=sys.stderr)
+
             plan.logger.debug("Function evaluated: %f", val)
+            unpack_and_set(x)
             return val
 
         def grad(x):
@@ -242,15 +267,28 @@ class ScipyOptimizer(goos.Action):
             options["maxiter"] -= start_iter
 
         initial_val = np.hstack(initial_val)
-        self._results = scipy.optimize.minimize(func,
-                                                initial_val,
-                                                method=self._method,
-                                                jac=jac,
-                                                callback=callback,
-                                                bounds=bounds,
-                                                constraints=constraints,
-                                                **options)
-        unpack_and_set(self._results["x"])
+        if self._method == "nevergrad":
+            try:
+                import nevergrad as ng
+            except:
+                assert False, "Please install nevergrad! << pip install nevergrad >>"
+            arr = ng.p.TransitionChoice([0, 1], repetitions=len(initial_val))
+            print(f"working in dimension {len(initial_val)}")
+            value = ng.optimizers.registry["NGOpt"](arr, budget=60).minimize(func).value
+            unpack_and_set(value)
+        else:
+            self._results = scipy.optimize.minimize(func,
+                                                    initial_val,
+                                                    method=self._method,
+                                                    jac=jac,
+                                                    callback=callback,
+                                                    bounds=bounds,
+                                                    constraints=constraints,
+                                                    **options)
+            obtained_data = self._results["x"]
+            dec = [np.quantile(obtained_data, i/10.) for i in range(1,10)]
+            print(f"lbfgsb obtains values in {min(obtained_data)} -- {max(obtained_data)}, with deciles {dec}, and length {len(obtained_data)}")
+            unpack_and_set(self._results["x"])
 
     def resume(self, plan: goos.OptimizationPlan, event: Dict) -> None:
         self.run(plan, start_iter=event["iteration"])
