@@ -4,6 +4,42 @@
 .. image:: https://codecov.io/gh/stanfordnqp/spins-b/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/stanfordnqp/spins-b
     
+THIS FORK: adding black-box optimization in Spins-B
+===================================================
+Spins-B is probably the most well known code for photonics inverse design
+in the community. Therefore we  chose to do our work on gradient-free optimization inside it. The present fork is aimed at gathering branches which include gradient-free optimization.
+
+Spins-b (as forked in the present repository)
+is based on optimization as follows:
+1- random initialization
+2- optimization by BFGS: more precisely this is L-BFGS-B
+3- discretization enforced by sigmoid transformation.
+In the case of grating, there is an additional optimization
+step 4- by SLSQP, using a parametrization. Here the optimization is continuous
+(the parametrization is continuous) but the design is discrete (there are only two permittivities).
+
+We add one more step termed NG, at the end of 3:
+- Lengler's method (https://dl.acm.org/doi/10.1145/3321707.3321733)
+- equipped with a smoothing operator 
+
+The smoothing operator is detailed here:
+(https://github.com/facebookresearch/nevergrad/blob/8403d6c9659f40fec2a3cf7f474b3d8610f0f2e4/nevergrad/optimization/optimizerlib.py#L388).
+
+We are *very* grateful to Spins-B for providing us with this great code, central for our experiments.
+
+For example https://github.com/teytaud/spins-b/tree/patch-1 contains code for running Lengler+smoothing directly in Spins-B for the Bend90 case.
+
+Our results
+===========
+1+2+3+NG is better than 1+2+3 because the discretization by our discrete optimization methods works better than enforcing discretization through sigmoids.
+NG alone (as opposed to 1+2+3+NG) outperforms numerically 1+2+3 in some cases, in particular for large budgets. However, without the initial BFGS step, NG sometimes provides designs which are not smooth enough: the initial point provided by L-BFGS-B as included in Spins-B is essential for ensuring a good smoothness, which is better for buildability.
+
+Discussing with us
+==================
+Our code uses Nevergrad (https://github.com/facebookresearch/nevergrad)
+We are intensive Nevergrad users and we are happy to chat in https://www.facebook.com/groups/nevergradusers/
+
+
 SPINS-B
 =======
 
