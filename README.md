@@ -22,6 +22,9 @@ Considerations](https://arxiv.org/abs/1910.04829).
 
 [Documentation](http://spins-b.readthedocs.io) is continually updated over time.
 
+## SPINS Photonics Inc
+
+We launched [SPINS Photonics Inc](https://www.spinsphotonics.com/) to bring inverse design to commercial nanophotonic products!
 
 ## Installation
 
