@@ -1,0 +1,649 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Advanced Topics" href="advanced.html" /><link rel="prev" title="Core Concepts" href="basic.html" />
+
+    <!-- Generated with Sphinx 5.3.0 and Furo 2022.12.07 -->
+        <title>Extending SPINS - spins 0.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=91d0f0d1c444bdcb17a68e833c7a53903343c195" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?digest=30d1aed668e5c3a91c3e3bf6a60b675221979f0e" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-half" viewBox="0 0 24 24">
+    <title>Auto light/dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M13 12h5" />
+      <path d="M13 15h4" />
+      <path d="M13 18h1" />
+      <path d="M13 9h4" />
+      <path d="M13 6h1" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">spins 0.2.0 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  
+  <span class="sidebar-brand-text">spins 0.2.0 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../invdes/index.html">Invdes</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../invdes/examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../invdes/examples_grating_coupler.html">Example: Grating Coupler Optimization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Goos</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html">Solvers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic.html">Core Concepts</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Extending SPINS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced.html">Advanced Topics</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main">
+          <section id="extending-spins">
+<h1>Extending SPINS<a class="headerlink" href="#extending-spins" title="Permalink to this heading">#</a></h1>
+<p>Here we discuss how to add custom nodes, actions, and flows.</p>
+<section id="custom-nodes">
+<h2>Custom Nodes<a class="headerlink" href="#custom-nodes" title="Permalink to this heading">#</a></h2>
+<p>To create a custom node,</p>
+<ul class="simple">
+<li><p>Create a class that inherits from <code class="code docutils literal notranslate"><span class="pre">goos.ProblemGraphNode</span></code></p></li>
+<li><p>Add a <code class="code docutils literal notranslate"><span class="pre">node_type</span></code> class field that uniquely identifies the class.</p></li>
+<li><p>Add a type-annotated constructor that marks node inputs.</p></li>
+<li><p>Implement <code class="code docutils literal notranslate"><span class="pre">eval</span></code> and <code class="code docutils literal notranslate"><span class="pre">grad</span></code>.</p></li>
+<li><p>For performance gains, implement <code class="code docutils literal notranslate"><span class="pre">eval_const_flags</span></code>.</p></li>
+</ul>
+<p>A basic example of a node that doubles the value of its input is shown below:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">DoubleNode</span><span class="p">(</span><span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">):</span>
+  <span class="n">node_type</span> <span class="o">=</span> <span class="s2">&quot;mycustomnodes.double_node&quot;</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_vals</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">(</span><span class="n">input_vals</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">array</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">grad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_vals</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">],</span>
+           <span class="n">grad_val</span><span class="p">:</span> <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">(</span><span class="n">grad_val</span><span class="o">.</span><span class="n">array_grad</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This custom node inherits from <code class="code docutils literal notranslate"><span class="pre">goos.Function</span></code>, which in turn inherits from
+<code class="code docutils literal notranslate"><span class="pre">goos.ProblemGraphNode</span></code>. By inheriting from <code class="code docutils literal notranslate"><span class="pre">goos.Function</span></code>, we enable users
+of our node to perform other numeric operations on it:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">var</span> <span class="o">=</span> <span class="n">goos</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">node</span> <span class="o">=</span> <span class="n">DoubleNode</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+<span class="c1"># The following line is only possible because we inherit from</span>
+<span class="c1"># `goos.Function` rather than `goos.ProblemGraphNode` directly.</span>
+<span class="n">obj</span> <span class="o">=</span> <span class="n">node</span> <span class="o">+</span> <span class="mi">3</span>
+</pre></div>
+</div>
+<p>Next, we named our node “mycustomnodes.double_node”. This needs to be a unique
+name across all possible nodes. We therefore recommend the format
+“your_own_unique_identifier.node_name”. This name is used to serialize and
+deserialize the node from disk.</p>
+<p>The node constructor is defined and properly type-annotated. The type
+annotations are used internally to construct a schema for the node, which is
+used to validate its inputs. For example, because the sole argument <code class="code docutils literal notranslate"><span class="pre">node</span></code> is
+defined as a <code class="code docutils literal notranslate"><span class="pre">goos.Function</span></code>, the following will raise an error:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Raises an error because `3` is not a `goos.Function`!</span>
+<span class="n">node</span> <span class="o">=</span> <span class="n">DoubleNode</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="c1"># Instead, we need to wrap the 3 as a constant.</span>
+<span class="n">node</span> <span class="o">=</span> <span class="n">DoubleNode</span><span class="p">(</span><span class="n">goos</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>You may find it annoying for users to have to wrap a constant input as a
+<code class="code docutils literal notranslate"><span class="pre">goos.Constant</span></code> function node. For the moment, we will live with this fact;
+we will come back to the topic of usability later.</p>
+<p>Because the inputs must be serializable, only certain type annotations are
+supported at the moment:</p>
+<ul class="simple">
+<li><p>The native types <code class="code docutils literal notranslate"><span class="pre">int</span></code>, <code class="code docutils literal notranslate"><span class="pre">float</span></code>, <code class="code docutils literal notranslate"><span class="pre">str</span></code>, <code class="code docutils literal notranslate"><span class="pre">bool</span></code>, and <code class="code docutils literal notranslate"><span class="pre">complex</span></code></p></li>
+<li><p><code class="code docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></p></li>
+<li><p>The composite types <code class="code docutils literal notranslate"><span class="pre">List</span></code> and <code class="code docutils literal notranslate"><span class="pre">Union</span></code></p></li>
+<li><p>Any <code class="code docutils literal notranslate"><span class="pre">goos.ProblemGraphNode</span></code></p></li>
+<li><p>Any <code class="code docutils literal notranslate"><span class="pre">goos.Model</span></code></p></li>
+</ul>
+<p>In the constructor, we call <code class="code docutils literal notranslate"><span class="pre">__init__</span></code> with a single argument that marks all
+the problem graph node dependencies. The flows generated by all the nodes
+given as an argument to <code class="code docutils literal notranslate"><span class="pre">__init__</span></code> will be passed to <code class="code docutils literal notranslate"><span class="pre">eval</span></code> and <code class="code docutils literal notranslate"><span class="pre">grad</span></code> as
+<code class="code docutils literal notranslate"><span class="pre">input_vals</span></code>. If there is more than one dependency, the order in which they are
+passed to <code class="code docutils literal notranslate"><span class="pre">__init__</span></code> indcates the order that they are passed to <code class="code docutils literal notranslate"><span class="pre">eval</span></code> and
+<code class="code docutils literal notranslate"><span class="pre">grad</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">SumAndDoubleNode</span><span class="p">(</span><span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">):</span>
+   <span class="n">node_type</span> <span class="o">=</span> <span class="s2">&quot;mycustomnodes.sum_and_double_node&quot;</span>
+
+   <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node1</span><span class="p">:</span> <span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">,</span> <span class="n">node2</span><span class="p">:</span> <span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">([</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">])</span>
+
+   <span class="k">def</span> <span class="nf">eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_vals</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">:</span>
+     <span class="c1"># `input_vals` contains flows for `node1` followed by `node2`.</span>
+     <span class="n">node1_val</span> <span class="o">=</span> <span class="n">input_vals</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">array</span>
+     <span class="n">node2_val</span> <span class="o">=</span> <span class="n">input_vals</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">array</span>
+     <span class="o">...</span>
+</pre></div>
+</div>
+<p>Finally, we implement the node logic by defining <code class="code docutils literal notranslate"><span class="pre">eval</span></code> and <code class="code docutils literal notranslate"><span class="pre">grad</span></code>. <code class="code docutils literal notranslate"><span class="pre">eval</span></code> is
+called to evaluate the function and <code class="code docutils literal notranslate"><span class="pre">grad</span></code> is called to evaluate the gradient.
+Specifically, <code class="code docutils literal notranslate"><span class="pre">eval</span></code> accepts a list of input flows from the nodes marked as
+dependencies in the constructor and must produce a single flow as output. <code class="code docutils literal notranslate"><span class="pre">grad</span></code>
+accepts a list of input flows as well as the current backward gradient value
+and produces the corresponding gradient flow.</p>
+<section id="implementing-eval-and-grad">
+<h3>Implementing <code class="code docutils literal notranslate"><span class="pre">eval</span></code> and <code class="code docutils literal notranslate"><span class="pre">grad</span></code><a class="headerlink" href="#implementing-eval-and-grad" title="Permalink to this heading">#</a></h3>
+<p><code class="code docutils literal notranslate"><span class="pre">eval</span></code> and <code class="code docutils literal notranslate"><span class="pre">grad</span></code> form the backbone of the backpropr algorithm to automatically
+compute objective function values and their gradients. Specifically, if the
+objective function is given by <span class="math notranslate nohighlight">\(f\)</span>, then the <code class="code docutils literal notranslate"><span class="pre">grad</span></code> function for a node
+<span class="math notranslate nohighlight">\(g\)</span> with inputs <span class="math notranslate nohighlight">\(x_1, x_2, \cdots, x_n\)</span> should compute the partial
+derivatives <span class="math notranslate nohighlight">\(\frac{df}{dx_1}, \frac{df}{dx_2}, \cdots, \frac{df}{dx_n}\)</span>.
+The partial derivative <span class="math notranslate nohighlight">\(\frac{df}{dg}\)</span> is given as the second argument to
+<code class="code docutils literal notranslate"><span class="pre">grad</span></code>.</p>
+<p>For example, suppose we have a node that takes two inputs and implements the
+function <span class="math notranslate nohighlight">\(g(x, y) = x \cdot (y + 1)\)</span>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">NodeG</span><span class="p">(</span><span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">):</span>
+   <span class="n">node_type</span> <span class="o">=</span> <span class="s2">&quot;mycustomnodes.node_g&quot;</span>
+
+   <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node1</span><span class="p">:</span> <span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">,</span> <span class="n">node2</span><span class="p">:</span> <span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">([</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">])</span>
+
+   <span class="k">def</span> <span class="nf">eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_vals</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">:</span>
+     <span class="n">x</span> <span class="o">=</span> <span class="n">input_vals</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">array</span>
+     <span class="n">y</span> <span class="o">=</span> <span class="n">input_vals</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">array</span>
+
+     <span class="k">return</span> <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="p">(</span><span class="n">y</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>The <code class="code docutils literal notranslate"><span class="pre">grad</span></code> function needs to compute <span class="math notranslate nohighlight">\(\frac{dg}{dx} = y + 1\)</span> and
+<span class="math notranslate nohighlight">\(\frac{dg}{dy} = x\)</span> given <span class="math notranslate nohighlight">\(\frac{df}{dg}\)</span>, which is passed as the
+second argument in <code class="code docutils literal notranslate"><span class="pre">grad</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">NodeG</span><span class="p">(</span><span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">):</span>
+   <span class="o">...</span>
+
+   <span class="k">def</span> <span class="nf">grad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_vals</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">],</span>
+                  <span class="n">grad_val</span><span class="p">:</span> <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">)</span>
+                  <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">]:</span>
+     <span class="n">x</span> <span class="o">=</span> <span class="n">input_vals</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">array</span>
+     <span class="n">y</span> <span class="o">=</span> <span class="n">input_vals</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">array</span>
+
+     <span class="n">df_dx</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">grad_val</span><span class="o">.</span><span class="n">array_grad</span>
+     <span class="n">df_dy</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="n">grad_val</span><span class="o">.</span><span class="n">array_grad</span>
+
+     <span class="k">return</span> <span class="p">[</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">(</span><span class="n">dg_dx</span><span class="p">),</span> <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">(</span><span class="n">dg_dy</span><span class="p">)]</span>
+</pre></div>
+</div>
+<p>In order to ensure the correctness and reproduciblity of SPINS, the following
+rules must hold true for <code class="code docutils literal notranslate"><span class="pre">eval</span></code> and <code class="code docutils literal notranslate"><span class="pre">grad</span></code>:</p>
+<ul class="simple">
+<li><p>Flows should NOT be modified. If you want to modify a flow, make a copy first.</p></li>
+<li><p>Flow values should only depend on values computed from the input flows or
+parameters passed in through the constructor.</p></li>
+</ul>
+<p>Note that in SPINS, the flow system uses duck typing: Anything that has the
+appropriate properties of a flow is considered a flow of that type. Furthermore,
+a flow type may be considered as more than one type of flow. For example,
+the <code class="code docutils literal notranslate"><span class="pre">PixelatedContShapeFlow</span></code> can be considered a <code class="code docutils literal notranslate"><span class="pre">NumericFlow</span></code> because it
+has an <code class="code docutils literal notranslate"><span class="pre">array</span></code> property as well as a <code class="code docutils literal notranslate"><span class="pre">ShapeFlow</span></code> as it has all the requisite
+<code class="code docutils literal notranslate"><span class="pre">ShapeFlow</span></code> properties. Consequently, for single input, single output nodes,
+it may be advisable to clone the flow rather than creating a new one:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_vals</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">:</span>
+  <span class="n">out_flow</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepycopy</span><span class="p">(</span><span class="n">input_vals</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+  <span class="n">out_flow</span><span class="o">.</span><span class="n">array</span> <span class="o">=</span> <span class="o">...</span>
+
+  <span class="k">return</span> <span class="n">out_flow</span>
+</pre></div>
+</div>
+<p>This way, this node can be used for <code class="code docutils literal notranslate"><span class="pre">NumericFlow</span></code> and <code class="code docutils literal notranslate"><span class="pre">PixelatedContShapeFLow</span></code>:
+If a <code class="code docutils literal notranslate"><span class="pre">NumericFlow</span></code> is passed as input, then the output is a <code class="code docutils literal notranslate"><span class="pre">NumericFlow</span></code>.
+If a <code class="code docutils literal notranslate"><span class="pre">PixelatedContShapeFlow</span></code> is passed as input, then the output is a
+<code class="code docutils literal notranslate"><span class="pre">PixelatedContShapeFlow</span></code>.</p>
+</section>
+<section id="models">
+<h3>Models<a class="headerlink" href="#models" title="Permalink to this heading">#</a></h3>
+<p>Because nodes must be serializable, we cannot pass arbitrary objects into the
+constructor of a node. However, it may be beneficial to pass more complex
+data objects. Currently, the mechanism for doing this is through the
+<a class="reference external" href="http://schematics.readthedocs.io">schematics</a> Python library. For convenience,
+we have aliased <code class="code docutils literal notranslate"><span class="pre">schematics.models.Model</span></code> to <code class="code docutils literal notranslate"><span class="pre">goos.Model</span></code> and <code class="code docutils literal notranslate"><span class="pre">schematics.types</span></code>
+to <code class="code docutils literal notranslate"><span class="pre">goos.types</span></code> and slightly modified the functionality.</p>
+<p>For convenience, we have defined a complex number type and a NumPy array
+type (see <code class="code docutils literal notranslate"><span class="pre">goos.optplan.schema_types</span></code>). We also have implemented a few common
+schema types in <code class="code docutils literal notranslate"><span class="pre">goos.common_schemas</span></code>.</p>
+</section>
+<section id="usability">
+<h3>Usability<a class="headerlink" href="#usability" title="Permalink to this heading">#</a></h3>
+<p>Sometimes, it may be clumsy to define a node directly in code. In the above
+<code class="code docutils literal notranslate"><span class="pre">DoubleNode</span></code> example, for instance, a user must wrap a constant number like 3 as
+a <code class="code docutils literal notranslate"><span class="pre">goos.Constant</span></code> before passing it into <code class="code docutils literal notranslate"><span class="pre">DoubleNode</span></code>. To mitigate these
+convenience and usability issues, we recommend defining functions that create
+nodes on behalf of the user. For example,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span> <span class="k">def</span> <span class="nf">double_node</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">,</span> <span class="nb">float</span><span class="p">]):</span>
+   <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">):</span>
+     <span class="n">node</span> <span class="o">=</span> <span class="n">goos</span><span class="o">.</span><span class="n">Constant</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+   <span class="k">return</span> <span class="n">DoubleNode</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+<span class="n">node</span> <span class="o">=</span> <span class="n">double_node</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">node2</span> <span class="o">=</span> <span class="n">double_node</span><span class="p">(</span><span class="n">goos</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>You see this kind of node creation functions throughout the codebase in order
+to simplify node creation.</p>
+</section>
+</section>
+<section id="custom-actions">
+<h2>Custom Actions<a class="headerlink" href="#custom-actions" title="Permalink to this heading">#</a></h2>
+<p>A custom action must do the following:</p>
+<ul class="simple">
+<li><p>Inherit from <code class="code docutils literal notranslate"><span class="pre">goos.Action</span></code></p></li>
+<li><p>Add a <code class="code docutils literal notranslate"><span class="pre">node_type</span></code> class field that uniquely identifies the class.</p></li>
+<li><p>Add a type-annotated constructor that marks node inputs.</p></li>
+<li><p>Inherit <code class="code docutils literal notranslate"><span class="pre">run</span></code> method that accepts an optimization plan as an argument.</p></li>
+</ul>
+<p>From a structural point of view, defining an action is similar to defining a
+node except that an action inherits from <code class="code docutils literal notranslate"><span class="pre">goos.Action</span></code> instead of
+<code class="code docutils literal notranslate"><span class="pre">goos.ProblemGraphNode</span></code> and that an action implements <code class="code docutils literal notranslate"><span class="pre">run</span></code> instead of
+<code class="code docutils literal notranslate"><span class="pre">eval</span></code> and <code class="code docutils literal notranslate"><span class="pre">grad</span></code>. The above discussion about defining node types and a
+type-annotated constructor remains the same with the following main exception:
+It is unnecessary to declare any dependencies through <code class="code docutils literal notranslate"><span class="pre">super().__init__</span></code>. Below
+we show an example of an action that adds one to a variable.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">AddOne</span><span class="p">(</span><span class="n">goos</span><span class="o">.</span><span class="n">Action</span><span class="p">):</span>
+   <span class="n">node_type</span> <span class="o">=</span> <span class="s2">&quot;myactions.add_one&quot;</span>
+
+   <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">var</span><span class="p">:</span> <span class="n">goos</span><span class="o">.</span><span class="n">Variable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+     <span class="bp">self</span><span class="o">.</span><span class="n">_var</span> <span class="o">=</span> <span class="n">var</span>
+
+   <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plan</span><span class="p">:</span> <span class="n">goos</span><span class="o">.</span><span class="n">OptimizationPlan</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+     <span class="n">val</span> <span class="o">=</span> <span class="n">plan</span><span class="o">.</span><span class="n">get_var_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_var</span><span class="p">)</span>
+     <span class="n">plan</span><span class="o">.</span><span class="n">set_var_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_var</span><span class="p">,</span> <span class="n">val</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <code class="code docutils literal notranslate"><span class="pre">run</span></code> method accepts an optimization plan as input and changes the plan
+state. However, the <code class="code docutils literal notranslate"><span class="pre">run</span></code> method in the following ways:</p>
+<ul class="simple">
+<li><p>Call <code class="code docutils literal notranslate"><span class="pre">eval_nodes</span></code> and <code class="code docutils literal notranslate"><span class="pre">eval_grad</span></code> to evaluate the values and gradients of
+nodes. A plan should NOT call <code class="code docutils literal notranslate"><span class="pre">node.get()</span></code> and <code class="code docutils literal notranslate"><span class="pre">node.get_grad()</span></code>.</p></li>
+<li><p>Call <code class="code docutils literal notranslate"><span class="pre">set_var_value</span></code> and <code class="code docutils literal notranslate"><span class="pre">get_var_value</span></code> to get and set the values of a node.
+Again, this should be done in lieu of <code class="code docutils literal notranslate"><span class="pre">node.get()</span></code>. Note that setting the
+value of a frozen variable may raise an exception.</p></li>
+<li><p>Call <code class="code docutils literal notranslate"><span class="pre">set_var_bounds</span></code> and <code class="code docutils literal notranslate"><span class="pre">get_var_bounds</span></code> to change the bounds of a variable.</p></li>
+</ul>
+<p>As a general rule of thumb, an action may always request information about the
+plan state but may not be able to change the state. The <code class="code docutils literal notranslate"><span class="pre">run</span></code> method should NOT
+add or remove nodes from the graph as this has the potential to break the
+reproducibility of the system. The <code class="code docutils literal notranslate"><span class="pre">run</span></code> method should also NOT call
+<code class="code docutils literal notranslate"><span class="pre">plan.run()</span></code> or any method that would invoke <code class="code docutils literal notranslate"><span class="pre">plan.run()</span></code>
+(e.g. <code class="code docutils literal notranslate"><span class="pre">node.get(run=True)</span></code>).</p>
+<section id="id1">
+<h3>Usability<a class="headerlink" href="#id1" title="Permalink to this heading">#</a></h3>
+<p>As with nodes, we recommend defining creation function for actions. A typical
+creation function is as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">add_one</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AddOne</span><span class="p">:</span>
+   <span class="n">action</span> <span class="o">=</span> <span class="n">AddOne</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+   <span class="n">goos</span><span class="o">.</span><span class="n">get_default_plan</span><span class="p">()</span><span class="o">.</span><span class="n">add_action</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+   <span class="k">return</span> <span class="n">action</span>
+</pre></div>
+</div>
+<p>In this case, this function simply forwards all the arguments to the action
+class though more preprocessing can be done. Additionally, the action is
+automatically added to the default plan, obviated the need for the user to
+explicitly call <code class="code docutils literal notranslate"><span class="pre">add_action</span></code>.</p>
+</section>
+</section>
+<section id="custom-flows">
+<h2>Custom Flows<a class="headerlink" href="#custom-flows" title="Permalink to this heading">#</a></h2>
+<p>You may wish to define a custom flow if none of the existing flows capture
+the correct description of the object you wish to define. This is often true for
+new descriptions of shapes.</p>
+<p>Flows must follow a few rules:</p>
+<ul class="simple">
+<li><p>Must inherit from <code class="code docutils literal notranslate"><span class="pre">goos.Flow</span></code>.</p></li>
+<li><p>Must be pickable (or more specifically, dillable).</p></li>
+<li><p>Must provide a constructor that accepts no arguments. Note that this implies
+that all fields should have default values.</p></li>
+<li><p>Must define an inner class called <code class="code docutils literal notranslate"><span class="pre">Grad</span></code>. This is automatically generated if
+not explicitly defined.</p></li>
+<li><p>Must define an inner class called <code class="code docutils literal notranslate"><span class="pre">ConstFlags</span></code>. This is automatically
+generated if not explicitly defined.</p></li>
+</ul>
+<p>Flows <em>can</em> do the following though:</p>
+<ul class="simple">
+<li><p>Inherit from more than one type of flow, though you should carefully consider
+the ramifications.</p></li>
+<li><p>Contain other flows.</p></li>
+</ul>
+<p>To define a flow, simply create a class that inherits from <code class="code docutils literal notranslate"><span class="pre">Flow</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyFlow</span><span class="p">(</span><span class="n">goos</span><span class="o">.</span><span class="n">Flow</span><span class="p">):</span>
+    <span class="n">myfield</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">myfield2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">goos</span><span class="o">.</span><span class="n">np_zero_field</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">myfield3</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">3</span>
+</pre></div>
+</div>
+<p>By default, flows are converted into Python dataclasses and thus the dataclass
+syntax can be used. Default values are provided so that the automatically
+defined constructor requires no arguments. <code class="code docutils literal notranslate"><span class="pre">goos.np_zero_field</span></code> is a utility
+function that creates a field with numpy array zeros (it is short for
+<code class="code docutils literal notranslate"><span class="pre">dataclasses.field(default=factory=lambda:</span> <span class="pre">np.zeros(n))</span></code>. This is
+necessary because best coding practices dictate that we should not default
+initialize with an object.</p>
+<p>This flow can now be used like so:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">flow</span> <span class="o">=</span> <span class="n">MyFlow</span><span class="p">()</span>
+<span class="n">flow</span><span class="o">.</span><span class="n">myfield</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="n">flow</span> <span class="o">=</span> <span class="n">MyFlow</span><span class="p">(</span><span class="n">myfield2</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">]))</span>
+</pre></div>
+</div>
+<p>Because we did not explicitly define a <code class="code docutils literal notranslate"><span class="pre">Grad</span></code> and <code class="code docutils literal notranslate"><span class="pre">ConstFlags</span></code> class, they were
+automatically generated. In auto-generated <code class="code docutils literal notranslate"><span class="pre">Grad</span></code> classes, every numeric field
+with name <code class="code docutils literal notranslate"><span class="pre">fieldname</span></code> will have an associated field <code class="code docutils literal notranslate"><span class="pre">fieldname_grad</span></code> in the
+<code class="code docutils literal notranslate"><span class="pre">Grad</span></code> class. In auto-generated <code class="code docutils literal notranslate"><span class="pre">ConstFlags</span></code>, all the fields in the flow will
+exist in <code class="code docutils literal notranslate"><span class="pre">ConstFlags</span></code> except that they all become booleans:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">grad_flow</span> <span class="o">=</span> <span class="n">MyFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">()</span>
+<span class="n">grad_flow</span><span class="o">.</span><span class="n">myfield2_grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">])</span>
+
+<span class="n">const_flags</span> <span class="o">=</span> <span class="n">MyFlow</span><span class="o">.</span><span class="n">ConstFlags</span><span class="p">(</span><span class="n">myfield</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">myfield2</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that automatic generation works assuming that the dataflow model is used
+for the class. If you choose not to define flow fields this way, you should
+declare your own <code class="code docutils literal notranslate"><span class="pre">Grad</span></code> and <code class="code docutils literal notranslate"><span class="pre">ConstFlags</span></code>.</p>
+<section id="gradient-flow">
+<h3>Gradient Flow<a class="headerlink" href="#gradient-flow" title="Permalink to this heading">#</a></h3>
+<p>Every flow has an associated <em>gradient flow</em> that represents the flow containing
+gradient information. Consequently, during forward evaluation of the nodes,
+flows are passed as inputs whereas during the backward evaluation, gradient
+flows are passed as inputs. The gradient flow associated with a flow is simply
+the flow name plus <code class="code docutils literal notranslate"><span class="pre">.Grad</span></code>. For example, a flow called <code class="code docutils literal notranslate"><span class="pre">MyFlow</span></code> would have a
+gradient flow named <code class="code docutils literal notranslate"><span class="pre">MyFlow.Grad</span></code>.</p>
+<p>By default, if no inner <code class="code docutils literal notranslate"><span class="pre">Grad</span></code> class is defined, a gradient flow class will be
+automatically constructed based on the defined fields of the <code class="code docutils literal notranslate"><span class="pre">Flow</span></code>. Note that
+the gradient flow class autogeneration assumes that the <code class="code docutils literal notranslate"><span class="pre">Flow</span></code> operates as a
+normal dataclass. Therefore, if you do not rely on the dataclass operation of
+a <code class="code docutils literal notranslate"><span class="pre">Flow</span></code>, you should define your own <code class="code docutils literal notranslate"><span class="pre">Grad</span></code> class.</p>
+</section>
+<section id="constant-flags">
+<h3>Constant Flags<a class="headerlink" href="#constant-flags" title="Permalink to this heading">#</a></h3>
+<p>In order to optimize evaluation of the computational graph, additional flags
+known as <em>const flags</em> for each input are passed to <code class="code docutils literal notranslate"><span class="pre">eval</span></code> and <code class="code docutils literal notranslate"><span class="pre">grad</span></code>. For
+example, a simulation node may use the fact that a <code class="code docutils literal notranslate"><span class="pre">Shape</span></code> is constant to
+speed up the process of drawing the permittivity distribution. Specifically,
+every flow must have a <code class="code docutils literal notranslate"><span class="pre">ConstFlags</span></code> inner class. It is automatically generated
+if not defined. This class has a field for every non-constant field of the flow.</p>
+<p>The const flags are used in the following ways:</p>
+<ul class="simple">
+<li><p>Marking <em>constant</em> flow fields. Constant flow fields are those that cannot
+change (i.e. do not depend in any way on a <code class="code docutils literal notranslate"><span class="pre">Variable</span></code>).</p></li>
+<li><p>Marking <em>frozen</em> flow fields. Frozen flow fields are those that do not depend
+on any thawed <code class="code docutils literal notranslate"><span class="pre">Variable</span></code>.</p></li>
+</ul>
+<p>Thus, by definition, all constant flow fields are also frozen flow fields, but
+frozen flow fields need not be constant. During function or gradient evaluation,
+the constant flow fields and frozen flow fields are computed and stored in
+a separate instance of <code class="code docutils literal notranslate"><span class="pre">ConstFlags</span></code>. In other words, multiple <code class="code docutils literal notranslate"><span class="pre">ConstFlags</span></code>
+classes will be instantiated but will server different purposes.</p>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="advanced.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Advanced Topics</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="basic.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Core Concepts</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2018, Vuckovic Lab
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Extending SPINS</a><ul>
+<li><a class="reference internal" href="#custom-nodes">Custom Nodes</a><ul>
+<li><a class="reference internal" href="#implementing-eval-and-grad">Implementing <code class="code docutils literal notranslate"><span class="pre">eval</span></code> and <code class="code docutils literal notranslate"><span class="pre">grad</span></code></a></li>
+<li><a class="reference internal" href="#models">Models</a></li>
+<li><a class="reference internal" href="#usability">Usability</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#custom-actions">Custom Actions</a><ul>
+<li><a class="reference internal" href="#id1">Usability</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#custom-flows">Custom Flows</a><ul>
+<li><a class="reference internal" href="#gradient-flow">Gradient Flow</a></li>
+<li><a class="reference internal" href="#constant-flags">Constant Flags</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/scripts/furo.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    </body>
+</html>

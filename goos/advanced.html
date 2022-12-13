@@ -1,0 +1,436 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="prev" title="Extending SPINS" href="extending.html" />
+
+    <!-- Generated with Sphinx 5.3.0 and Furo 2022.12.07 -->
+        <title>Advanced Topics - spins 0.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=91d0f0d1c444bdcb17a68e833c7a53903343c195" />
+    <link rel="stylesheet" type="text/css" href="../_static/plot_directive.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?digest=30d1aed668e5c3a91c3e3bf6a60b675221979f0e" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-half" viewBox="0 0 24 24">
+    <title>Auto light/dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M13 12h5" />
+      <path d="M13 15h4" />
+      <path d="M13 18h1" />
+      <path d="M13 9h4" />
+      <path d="M13 6h1" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">spins 0.2.0 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  
+  <span class="sidebar-brand-text">spins 0.2.0 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../invdes/index.html">Invdes</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../invdes/examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../invdes/examples_grating_coupler.html">Example: Grating Coupler Optimization</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Goos</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html">Solvers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic.html">Core Concepts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extending.html">Extending SPINS</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Advanced Topics</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main">
+          <section id="advanced-topics">
+<h1>Advanced Topics<a class="headerlink" href="#advanced-topics" title="Permalink to this heading">#</a></h1>
+<section id="parallelization">
+<h2>Parallelization<a class="headerlink" href="#parallelization" title="Permalink to this heading">#</a></h2>
+<p>By default, with the exception of simulations, SPINS computes the computational
+graph serially and does not exploit any parallelism. Simulations, on the other
+hand, are parallelized as much as possible by default. Because function and
+gradient evaluation is dominated by the simulation time, you typically do not
+need to change these defaults. However, if you may choose to
+change this behavior on any node by calling the <code class="code docutils literal notranslate"><span class="pre">parallelize</span></code> method on any
+<code class="code docutils literal notranslate"><span class="pre">ProblemGraphNode</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Parallelize computation of the node.</span>
+<span class="n">node</span><span class="o">.</span><span class="n">parallelize</span><span class="p">()</span>
+
+<span class="c1"># Disables parallelization.</span>
+<span class="n">node</span><span class="o">.</span><span class="n">parallelize</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that turning on parallelization may actually cause a decrease in
+performance due to the overhead in the setup. Keep in mind that the
+parallelization operates by grouping together and executing in parallel
+operations that (1) are marked for parallel computing and (2) can be executed
+independently (i.e. no direct or indirect dependency between the nodes.
+Therefore, there may not be any true parallelization in effect if these
+conditons are never met during the execution of the computational graph.</p>
+</section>
+<section id="array-flows">
+<h2>Array Flows<a class="headerlink" href="#array-flows" title="Permalink to this heading">#</a></h2>
+<p>An <em>array flow</em> is, in essence, a list of other flows. Array flows are used to
+group together multiple flows into a single flow. Working with array flows
+is similar to working with arrays:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Array flow is created by passing an array of flows.</span>
+<span class="n">flow</span> <span class="o">=</span> <span class="n">goos</span><span class="o">.</span><span class="n">ArrayFlow</span><span class="p">([</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span> <span class="n">goos</span><span class="o">.</span><span class="n">ShapeFlow</span><span class="p">()])</span>
+
+<span class="c1"># Use indexing to set and get nth flow.</span>
+<span class="c1"># Prints 4.</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">flow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">array</span><span class="p">)</span>
+<span class="n">flow</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">])</span>
+
+<span class="c1"># Prints 2.</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">flow</span><span class="p">))</span>
+</pre></div>
+</div>
+<p><code class="code docutils literal notranslate"><span class="pre">ArrayFlow.Grad</span></code> works similarly:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Array flow is created by passing an array of flows.</span>
+<span class="n">flow</span> <span class="o">=</span> <span class="n">goos</span><span class="o">.</span><span class="n">ArrayFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">([</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span> <span class="n">goos</span><span class="o">.</span><span class="n">ShapeFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">()])</span>
+
+<span class="c1"># Use indexing to set and get nth flow.</span>
+<span class="c1"># Prints 4.</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">flow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">array_array_grad</span><span class="p">)</span>
+<span class="n">flow</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">pos_grad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>Additionally, <code class="code docutils literal notranslate"><span class="pre">ArrayFlow.Grad</span></code> supports adding multiple array flows together.
+When doing this summation, a flow added to <code class="code docutils literal notranslate"><span class="pre">None</span></code> is just the flow itself:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">flow1</span> <span class="o">=</span> <span class="n">goos</span><span class="o">.</span><span class="n">ArrayFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">([</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+                             <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">(</span><span class="mi">2</span><span class="p">)])</span>
+<span class="n">flow2</span> <span class="o">=</span> <span class="n">goos</span><span class="o">.</span><span class="n">ArrayFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">([</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span>
+                             <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">(</span><span class="mi">4</span><span class="p">)])</span>
+<span class="n">flow3</span> <span class="o">=</span> <span class="n">goos</span><span class="o">.</span><span class="n">ArrayFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">([</span><span class="kc">None</span><span class="p">,</span> <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">(</span><span class="mi">5</span><span class="p">)])</span>
+<span class="n">flow4</span> <span class="o">=</span> <span class="n">goos</span><span class="o">.</span><span class="n">ArrayFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">([</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">])</span>
+
+<span class="n">flow1</span> <span class="o">+</span> <span class="n">flow2</span> <span class="o">==</span> <span class="n">goos</span><span class="o">.</span><span class="n">ArrayFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">([</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span>
+                                      <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">(</span><span class="mi">6</span><span class="p">)])</span>
+
+<span class="n">flow1</span> <span class="o">+</span> <span class="n">flow3</span> <span class="o">==</span> <span class="n">goos</span><span class="o">.</span><span class="n">ArrayFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">([</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+                                      <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="o">.</span><span class="n">Grad</span><span class="p">(</span><span class="mi">5</span><span class="p">)])</span>
+
+<span class="n">flow1</span> <span class="o">+</span> <span class="n">flow4</span> <span class="o">==</span> <span class="n">flow1</span>
+</pre></div>
+</div>
+<section id="using-arrayflowopmixin">
+<h3>Using <code class="code docutils literal notranslate"><span class="pre">ArrayFlowOpMixin</span></code><a class="headerlink" href="#using-arrayflowopmixin" title="Permalink to this heading">#</a></h3>
+<p>For any node that produces an array flow, it is recommended that the node
+inherits <code class="code docutils literal notranslate"><span class="pre">ArrayFlowOpMixin</span></code>. This mixin overloads the indexing operator so that
+individual elements of the output array flow can be easily accessed. Suppose
+we have a node <code class="code docutils literal notranslate"><span class="pre">MyNode</span></code> that produces an array flow with two elements. Then,
+by inheriting from <code class="code docutils literal notranslate"><span class="pre">ArrayFlowOpMixin</span></code>, we can compute the sum as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Computes the next two elements in the Fibonacci sequence.</span>
+<span class="k">class</span> <span class="nc">FibonacciNode</span><span class="p">(</span><span class="n">goos</span><span class="o">.</span><span class="n">ArrayFlowOpMixin</span><span class="p">,</span> <span class="n">goos</span><span class="o">.</span><span class="n">ProblemGraphNode</span><span class="p">):</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in1</span><span class="p">:</span> <span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">,</span> <span class="n">in2</span><span class="p">:</span> <span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">([</span><span class="n">in1</span><span class="p">,</span> <span class="n">in2</span><span class="p">],</span> <span class="n">flow_types</span><span class="o">=</span><span class="p">[</span><span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">,</span> <span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">])</span>
+    <span class="o">...</span>
+
+  <span class="k">def</span> <span class="nf">eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">goos</span><span class="o">.</span><span class="n">ArrayFlow</span><span class="p">:</span>
+    <span class="n">fib_next</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">array</span> <span class="o">+</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">array</span>
+    <span class="n">fib_next_next</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">array</span> <span class="o">+</span> <span class="n">fib_next</span>
+    <span class="k">return</span> <span class="n">goos</span><span class="o">.</span><span class="n">ArrayFlow</span><span class="p">([</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">(</span><span class="n">fib_next</span><span class="p">),</span>
+                           <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">(</span><span class="n">fib_next_next</span><span class="p">)])</span>
+
+  <span class="o">...</span>
+
+<span class="n">node</span> <span class="o">=</span> <span class="n">FibonacciNode</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="n">out_sum</span> <span class="o">=</span> <span class="n">node</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">node</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Note that order of inheritance. Because it is a mixin, you should inherit from
+<code class="code docutils literal notranslate"><span class="pre">ArrayFlowOpMixin</span></code> before <code class="code docutils literal notranslate"><span class="pre">ProblemGraphNode</span></code> (or any other node class).
+Additionally, we pass an array <code class="code docutils literal notranslate"><span class="pre">flow_types</span></code> to the mixin constructor. This
+array sets the type of node that is returned when performing the indexing
+operation.</p>
+<p>You may also choose to set <code class="code docutils literal notranslate"><span class="pre">flow_names</span></code>, which enables indexing by name
+instead of by number:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">FibonacciNode</span><span class="p">(</span><span class="n">goos</span><span class="o">.</span><span class="n">ArrayFlowOpMixin</span><span class="p">,</span> <span class="n">goos</span><span class="o">.</span><span class="n">ProblemGraphNode</span><span class="p">):</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">...</span><span class="p">,</span>
+                     <span class="n">flow_types</span><span class="o">=</span><span class="p">[</span><span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">,</span> <span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">],</span>
+                     <span class="n">flow_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;first&quot;</span><span class="p">,</span> <span class="s2">&quot;second&quot;</span><span class="p">])</span>
+    <span class="o">...</span>
+
+  <span class="o">...</span>
+
+<span class="n">node</span> <span class="o">=</span> <span class="n">FibonacciNode</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="n">out_sum</span> <span class="o">=</span> <span class="n">node</span><span class="p">[</span><span class="s2">&quot;first&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">node</span><span class="p">[</span><span class="s2">&quot;second&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<section id="using-indexop">
+<h3>Using <code class="code docutils literal notranslate"><span class="pre">IndexOp</span></code><a class="headerlink" href="#using-indexop" title="Permalink to this heading">#</a></h3>
+<p>You can also “manually” extract an element from an <code class="code docutils literal notranslate"><span class="pre">ArrayFlow</span></code> node by using
+the <code class="code docutils literal notranslate"><span class="pre">IndexOp</span></code> node:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Computes the next two elements in the Fibonacci sequence.</span>
+<span class="k">class</span> <span class="nc">FibonacciNode</span><span class="p">(</span><span class="n">goos</span><span class="o">.</span><span class="n">ProblemGraphNode</span><span class="p">):</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in1</span><span class="p">:</span> <span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">,</span> <span class="n">in2</span><span class="p">:</span> <span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">([</span><span class="n">in1</span><span class="p">,</span> <span class="n">in2</span><span class="p">])</span>
+    <span class="o">...</span>
+
+  <span class="k">def</span> <span class="nf">eval</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">goos</span><span class="o">.</span><span class="n">ArrayFlow</span><span class="p">:</span>
+    <span class="n">fib_next</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">array</span> <span class="o">+</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">array</span>
+    <span class="n">fib_next_next</span> <span class="o">=</span> <span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">array</span> <span class="o">+</span> <span class="n">fib_next</span>
+    <span class="k">return</span> <span class="n">goos</span><span class="o">.</span><span class="n">ArrayFlow</span><span class="p">([</span><span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">(</span><span class="n">fib_next</span><span class="p">),</span>
+                           <span class="n">goos</span><span class="o">.</span><span class="n">NumericFlow</span><span class="p">(</span><span class="n">fib_next_next</span><span class="p">)])</span>
+
+  <span class="o">...</span>
+
+<span class="n">node</span> <span class="o">=</span> <span class="n">FibonacciNode</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="n">out_sum</span> <span class="o">=</span> <span class="p">(</span><span class="n">goos</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">IndexOp</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">)</span>
+           <span class="o">*</span> <span class="n">goos</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">IndexOp</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">goos</span><span class="o">.</span><span class="n">Function</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that we had to cast the output node into <code class="code docutils literal notranslate"><span class="pre">goos.Function</span></code> before being able
+to use arithemetic operations. This arises from the fact that <code class="code docutils literal notranslate"><span class="pre">IndexOp</span></code>
+inherits directly from <code class="code docutils literal notranslate"><span class="pre">ProblemGraphNode</span></code>, so arithmetic operations, which can
+only operate on <code class="code docutils literal notranslate"><span class="pre">Function</span></code> cannot be directly performed.</p>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          <a class="prev-page" href="extending.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Extending SPINS</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2018, Vuckovic Lab
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Advanced Topics</a><ul>
+<li><a class="reference internal" href="#parallelization">Parallelization</a></li>
+<li><a class="reference internal" href="#array-flows">Array Flows</a><ul>
+<li><a class="reference internal" href="#using-arrayflowopmixin">Using <code class="code docutils literal notranslate"><span class="pre">ArrayFlowOpMixin</span></code></a></li>
+<li><a class="reference internal" href="#using-indexop">Using <code class="code docutils literal notranslate"><span class="pre">IndexOp</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/scripts/furo.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>
