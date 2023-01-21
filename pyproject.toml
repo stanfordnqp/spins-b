@@ -16,7 +16,7 @@ classifiers = [
 ]
 version="0.2.0"
 authors = [
-    {name = "stanfordnqp", email = "stanfordnqp"},
+    {name = "stanfordnqp", email = "stanfordnqp@mail.com"},
 ]
 keywords = ["python"]
 license = {file = "LICENSE"}
