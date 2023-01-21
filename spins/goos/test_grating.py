@@ -388,3 +388,8 @@ def test_discretization(use_edge_locs, grating_params):
 
         np.testing.assert_allclose(edge_locs.get().array, grating_params)
         np.testing.assert_allclose(height_ind.get().array, [0, 1])
+
+
+if __name__ == "__main__": 
+    # test_grating_one_teeth()
+    test_pixelated_multietch_grating_fit_edge_locs()
