@@ -3,7 +3,7 @@ name: Sphinx docs to gh-pages
 on:
   push:
     branches:
-      - master
+      - main
   workflow_dispatch:
 
 jobs:
@@ -11,12 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     name: Sphinx docs to gh-pages
     steps:
-      - name: Cancel Workflow Action
-        uses: styfle/cancel-workflow-action@0.9.1
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          python-version: 3.9
+          python-version: 3.10
           mamba-version: "*"
           channels: conda-forge,defaults
           channel-priority: true
@@ -27,14 +25,11 @@ jobs:
       - name: Installing the library
         shell: bash -l {0}
         run: |
-          pip install -r requirements_dev.txt
-          pip install -e .
-          sudo wget https://github.com/jgm/pandoc/releases/download/1.16.0.2/pandoc-1.16.0.2-1-amd64.deb
-          sudo dpkg -i pandoc-1.16.0.2-1-amd64.deb
-          #sudo apt install pandoc
+          pip install -e .[docs]
+          sudo apt install pandoc
       - name: Running the Sphinx to gh-pages Action
         uses: uibcdf/action-sphinx-docs-to-gh-pages@v1.0-beta.2
         with:
-          branch: master
+          branch: main
           dir_docs: docs
           sphinxopts: ""
