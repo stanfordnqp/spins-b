@@ -142,3 +142,6 @@ def test_optimize_resume(tmp_path):
         plan.resume()
 
         assert y.get() == 5
+
+if __name__ == "__main__": 
+    test_optimize_simple()
